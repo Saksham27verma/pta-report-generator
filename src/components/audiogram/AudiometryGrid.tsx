@@ -4,6 +4,7 @@ import {
   FormControlLabel,
   Paper,
   Stack,
+  Button,
   Switch,
   Table,
   TableBody,
@@ -50,11 +51,25 @@ export function AudiometryGrid({ value, onChange }: Props) {
   return (
     <Paper sx={{ p: 2 }}>
       <Stack spacing={1.5}>
-        <Box>
-          <Typography variant="h6">Audiometry Data Entry</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Frequencies: 250, 500, 1k, 2k, 4k, 8k Hz • dB HL scale -10 to 120
-          </Typography>
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start' }}>
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="h6">Audiometry Data Entry</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Frequencies: 250, 500, 1k, 2k, 4k, 8k Hz • dB HL scale -10 to 120
+            </Typography>
+          </Box>
+          <Button
+            variant="outlined"
+            onClick={() => {
+              const next: AudiometryData = structuredClone(value)
+              for (const f of AUDIO_FREQS) {
+                next.left[f].bone = { ...next.right[f].bone }
+              }
+              onChange(next)
+            }}
+          >
+            Copy Right BC → Left BC
+          </Button>
         </Box>
 
         <Table size="small">

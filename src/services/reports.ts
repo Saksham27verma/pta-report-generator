@@ -5,7 +5,6 @@ import {
   doc,
   getDoc,
   getDocs,
-  orderBy,
   query,
   serverTimestamp,
   updateDoc,
@@ -61,9 +60,13 @@ export async function getReport(reportId: string): Promise<ReportDoc | null> {
 
 export async function listReportsForUser(uid: string): Promise<ReportSummary[]> {
   const col = collection(requireDb(), REPORTS)
-  const q = query(col, where('createdByUid', '==', uid), orderBy('updatedAt', 'desc'))
+  // Avoid composite index requirements by not ordering on a separate field.
+  // We'll sort client-side using dateOfTest (string YYYY-MM-DD) where available.
+  const q = query(col, where('createdByUid', '==', uid))
   const res = await getDocs(q)
-  return res.docs.map((d) => toSummary(d.id, d.data()))
+  const items = res.docs.map((d) => toSummary(d.id, d.data()))
+  items.sort((a, b) => (b.dateOfTest || '').localeCompare(a.dateOfTest || ''))
+  return items
 }
 
 export function normalizeTimestamps(report: ReportDoc): ReportDoc {

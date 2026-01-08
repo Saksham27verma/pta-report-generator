@@ -10,7 +10,7 @@ import {
   Typography,
 } from '@mui/material'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { AudiogramPair } from '../components/audiogram/AudiogramPair'
 import { AudiometryGrid } from '../components/audiogram/AudiometryGrid'
@@ -112,7 +112,7 @@ export function ReportEditorPage({ mode }: { mode: 'new' | 'edit' }) {
   return (
     <Stack spacing={2}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <Button component={Link} to="/" startIcon={<ArrowBack />} variant="text">
+        <Button onClick={() => nav('/')} startIcon={<ArrowBack />} variant="text">
           Back
         </Button>
         <Box sx={{ flex: 1 }}>

@@ -24,4 +24,6 @@ export const firebaseApp = isFirebaseConfigured ? initializeApp(firebaseConfig) 
 export const auth = firebaseApp ? getAuth(firebaseApp) : null
 export const db = firebaseApp ? getFirestore(firebaseApp) : null
 
+export const firebaseProjectId = firebaseConfig.projectId ?? ''
+
 

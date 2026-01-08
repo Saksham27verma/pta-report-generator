@@ -80,4 +80,17 @@ export type ReportSummary = {
   dateOfTest: string
 }
 
+export type ClinicSettings = {
+  clinicName: string
+  tagline: string
+  address: string
+  phone: string
+  email: string
+  website: string
+  logoDataUrl: string | null
+  primaryColor: string
+  accentColor: string
+  footerNote: string
+}
+
 

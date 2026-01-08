@@ -1,8 +1,14 @@
 import { Box, Divider, Paper, Typography } from '@mui/material'
 import type { ReportDoc } from '../../types'
 import { AudiogramPair } from '../audiogram/AudiogramPair'
+import { useClinicSettings } from '../../clinic/ClinicSettingsContext'
+import { DEFAULT_ACCENT, DEFAULT_PRIMARY } from '../../utils/clinicSettingsDefaults'
 
 export function ReportPrintView({ report }: { report: ReportDoc }) {
+  const { settings } = useClinicSettings()
+  const primary = settings.primaryColor || DEFAULT_PRIMARY
+  const accent = settings.accentColor || DEFAULT_ACCENT
+
   return (
     <Box
       sx={{
@@ -12,33 +18,108 @@ export function ReportPrintView({ report }: { report: ReportDoc }) {
         p: 2,
       }}
     >
-      <Header />
-      <Divider sx={{ my: 2 }} />
+      <Header
+        clinicName={settings.clinicName}
+        tagline={settings.tagline}
+        address={settings.address}
+        phone={settings.phone}
+        email={settings.email}
+        website={settings.website}
+        logoDataUrl={settings.logoDataUrl}
+        primary={primary}
+        accent={accent}
+      />
+      <Divider sx={{ my: 1.5 }} />
       <PatientBlock report={report} />
-      <Box sx={{ my: 2 }}>
+      <Box sx={{ my: 1.5 }}>
         <AudiogramPair data={report.audiometry} chartHeight={250} />
       </Box>
-      <Box sx={{ my: 2 }}>
+      <Box sx={{ my: 1.5 }}>
         <TestsTable report={report} />
       </Box>
-      <Box sx={{ my: 2 }}>
+      <Box sx={{ my: 1.5 }}>
         <DiagnosisBlock report={report} />
       </Box>
-      <Divider sx={{ my: 2 }} />
-      <Footer report={report} />
+      <Divider sx={{ my: 1.5 }} />
+      <Footer report={report} note={settings.footerNote} accent={accent} />
     </Box>
   )
 }
 
-function Header() {
+function Header({
+  clinicName,
+  tagline,
+  address,
+  phone,
+  email,
+  website,
+  logoDataUrl,
+  primary,
+  accent,
+}: {
+  clinicName: string
+  tagline: string
+  address: string
+  phone: string
+  email: string
+  website: string
+  logoDataUrl: string | null
+  primary: string
+  accent: string
+}) {
   return (
-    <Box sx={{ textAlign: 'center' }}>
-      <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: 1 }}>
-        HEARING HOPE
-      </Typography>
-      <Typography variant="body2" color="text.secondary">
-        (Audiology & Speech Clinic) • Address line 1, City • +91-XXXXXXXXXX • clinic@email.com
-      </Typography>
+    <Box>
+      <Box sx={{ height: 8, borderRadius: 999, background: `linear-gradient(90deg, ${primary}, ${accent})` }} />
+      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mt: 1.25 }}>
+        <Box
+          sx={{
+            width: 56,
+            height: 56,
+            borderRadius: 2,
+            border: `1px solid rgba(0,0,0,0.10)`,
+            display: 'grid',
+            placeItems: 'center',
+            overflow: 'hidden',
+            background: '#fff',
+          }}
+        >
+          {logoDataUrl ? (
+            <Box component="img" src={logoDataUrl} alt="Logo" sx={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+          ) : (
+            <Typography sx={{ fontWeight: 900, color: primary }}>HH</Typography>
+          )}
+        </Box>
+
+        <Box sx={{ flex: 1 }}>
+          <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: 0.5 }}>
+            {clinicName || 'Clinic'}
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'rgba(0,0,0,0.70)', fontWeight: 700 }}>
+            {tagline || ''}
+          </Typography>
+          <Typography variant="caption" sx={{ color: 'rgba(0,0,0,0.60)' }}>
+            {address || ''}
+          </Typography>
+        </Box>
+
+        <Box sx={{ textAlign: 'right' }}>
+          <Typography variant="caption" sx={{ color: 'rgba(0,0,0,0.70)' }}>
+            <b style={{ color: accent }}>Phone:</b> {phone || '—'}
+          </Typography>
+          <br />
+          <Typography variant="caption" sx={{ color: 'rgba(0,0,0,0.70)' }}>
+            <b style={{ color: accent }}>Email:</b> {email || '—'}
+          </Typography>
+          {website ? (
+            <>
+              <br />
+              <Typography variant="caption" sx={{ color: 'rgba(0,0,0,0.70)' }}>
+                <b style={{ color: accent }}>Web:</b> {website}
+              </Typography>
+            </>
+          ) : null}
+        </Box>
+      </Box>
     </Box>
   )
 }
@@ -128,11 +209,11 @@ function DiagnosisBlock({ report }: { report: ReportDoc }) {
   )
 }
 
-function Footer({ report }: { report: ReportDoc }) {
+function Footer({ report, note, accent }: { report: ReportDoc; note: string; accent: string }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-      <Typography variant="caption" color="text.secondary">
-        This report is computer generated and intended for clinical correlation.
+      <Typography variant="caption" sx={{ color: 'rgba(0,0,0,0.55)' }}>
+        {note || '—'}
       </Typography>
       <Box sx={{ textAlign: 'right' }}>
         {report.diagnosis.signatureDataUrl ? (
@@ -145,8 +226,10 @@ function Footer({ report }: { report: ReportDoc }) {
         ) : (
           <Box sx={{ height: 48 }} />
         )}
-        <Typography sx={{ fontWeight: 800 }}>{report.diagnosis.audiologistName || 'Audiologist'}</Typography>
-        <Typography variant="caption" color="text.secondary">
+        <Typography sx={{ fontWeight: 900, color: accent }}>
+          {report.diagnosis.audiologistName || 'Audiologist'}
+        </Typography>
+        <Typography variant="caption" sx={{ color: 'rgba(0,0,0,0.55)' }}>
           (Signature)
         </Typography>
       </Box>
