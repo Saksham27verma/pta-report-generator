@@ -102,4 +102,12 @@ export type AudiologistProfile = {
   signatureDataUrl: string | null
 }
 
+export type AiDiagnosisAssist = {
+  generatedAtIso: string
+  summary: string
+  suggestedText: string
+  reasoning: string[]
+  redFlags: string[]
+}
+
 

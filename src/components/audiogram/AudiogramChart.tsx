@@ -137,21 +137,75 @@ export function AudiogramChart({ ear, data, title, height = 320 }: Props) {
     afterDatasetsDraw(chart: any) {
       const ctx = chart.ctx
       ctx.save()
-      ctx.fillStyle = c
-      ctx.font = '700 11px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif'
+      ctx.font = '800 11px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif'
       ctx.textAlign = 'center'
-      ctx.textBaseline = 'bottom'
+      ctx.textBaseline = 'middle'
 
-      const metas = chart.getSortedVisibleDatasetMetas()
-      for (const meta of metas) {
-        const isAir = meta.dataset?.label === 'Air (AC)'
-        const flags = isAir ? airNr : boneNr
-        meta.data.forEach((pt: any, idx: number) => {
-          if (!flags[idx]) return
-          const { x, y } = pt.getProps(['x', 'y'], true)
-          ctx.fillText('NR', x, y - 6)
-        })
+      const xScale = chart.scales?.x
+      const yScale = chart.scales?.y
+      if (!xScale || !yScale) {
+        ctx.restore()
+        return
       }
+
+      // NR should be shown at max output markers, without plotting a definitive threshold:
+      // - AC NR at 120 dB
+      // - BC NR at 75 dB (typical max BC output)
+      const drawTag = (x: number, y: number, label: string) => {
+        const padX = 6
+        const textW = ctx.measureText(label).width
+        const w = Math.ceil(textW + padX * 2)
+        const h = 18
+        const r = 6
+
+        const left = x - w / 2
+        const top = y - h - 8
+
+        // Tag background
+        ctx.fillStyle = 'rgba(255,255,255,0.95)'
+        ctx.strokeStyle = c
+        ctx.lineWidth = 1.5
+
+        ctx.beginPath()
+        ctx.moveTo(left + r, top)
+        ctx.arcTo(left + w, top, left + w, top + h, r)
+        ctx.arcTo(left + w, top + h, left, top + h, r)
+        ctx.arcTo(left, top + h, left, top, r)
+        ctx.arcTo(left, top, left + w, top, r)
+        ctx.closePath()
+        ctx.fill()
+        ctx.stroke()
+
+        // Arrow from tag to point
+        ctx.beginPath()
+        ctx.moveTo(x, top + h)
+        ctx.lineTo(x, y - 2)
+        ctx.stroke()
+
+        // Small marker at y
+        ctx.fillStyle = c
+        ctx.beginPath()
+        ctx.arc(x, y, 3, 0, Math.PI * 2)
+        ctx.fill()
+
+        // Label text
+        ctx.fillStyle = c
+        ctx.fillText(label, x, top + h / 2 + 0.5)
+      }
+
+      const drawNrAt = (idx: number, yValue: number) => {
+        const x = xScale.getPixelForTick(idx)
+        const y = yScale.getPixelForValue(yValue)
+        drawTag(x, y, 'NR')
+      }
+
+      airNr.forEach((flag, idx) => {
+        if (flag) drawNrAt(idx, 120)
+      })
+      boneNr.forEach((flag, idx) => {
+        if (flag) drawNrAt(idx, 75)
+      })
+
       ctx.restore()
     },
   }

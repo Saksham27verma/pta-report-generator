@@ -1,4 +1,5 @@
 import { Box, Divider, Paper, Typography } from '@mui/material'
+import { Email, Language, Phone } from '@mui/icons-material'
 import type { ReportDoc } from '../../types'
 import { AudiogramPair } from '../audiogram/AudiogramPair'
 import { useClinicSettings } from '../../clinic/ClinicSettingsContext'
@@ -67,59 +68,156 @@ function Header({
   primary: string
   accent: string
 }) {
+  const addressLines = (address || '').split('\n').map((s) => s.trim()).filter(Boolean)
   return (
     <Box>
-      <Box sx={{ height: 8, borderRadius: 999, background: `linear-gradient(90deg, ${primary}, ${accent})` }} />
-      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', mt: 1.25 }}>
+      {/* Letterhead (tinted background for a more formal look) */}
+      <Box
+        sx={{
+          mt: 0.75,
+          p: 1.5,
+          borderRadius: 2,
+          border: '1px solid rgba(0,0,0,0.10)',
+          background: `linear-gradient(180deg, ${primary}14, rgba(255,255,255,0) 70%)`,
+        }}
+      >
+        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+          {/* Logo */}
+          <Box
+            sx={{
+              width: 86,
+              height: 86,
+              borderRadius: 2,
+              border: `1px solid rgba(0,0,0,0.10)`,
+              display: 'grid',
+              placeItems: 'center',
+              overflow: 'hidden',
+              background: '#fff',
+              flex: '0 0 auto',
+            }}
+          >
+            {logoDataUrl ? (
+              <Box
+                component="img"
+                src={logoDataUrl}
+                alt="Logo"
+                sx={{ width: '100%', height: '100%', objectFit: 'contain' }}
+              />
+            ) : (
+              <Typography sx={{ fontWeight: 900, color: primary, letterSpacing: 1 }}>
+                {clinicName ? clinicName.slice(0, 2).toUpperCase() : 'HH'}
+              </Typography>
+            )}
+          </Box>
+
+          {/* Center identity */}
+          <Box sx={{ flex: 1, minWidth: 0 }}>
+            <Typography
+              variant="h5"
+              sx={{
+                fontWeight: 900,
+                letterSpacing: 1,
+                textTransform: 'uppercase',
+                lineHeight: 1.1,
+              }}
+            >
+              {clinicName || 'Clinic'}
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{ color: 'rgba(0,0,0,0.75)', fontWeight: 700, mt: 0.25 }}
+            >
+              {tagline || ''}
+            </Typography>
+            <Box sx={{ mt: 0.5 }}>
+              {addressLines.length ? (
+                addressLines.map((ln, idx) => (
+                  <Typography
+                    key={idx}
+                    variant="caption"
+                    sx={{ color: 'rgba(0,0,0,0.62)', display: 'block' }}
+                  >
+                    {ln}
+                  </Typography>
+                ))
+              ) : (
+                <Typography variant="caption" sx={{ color: 'rgba(0,0,0,0.62)', display: 'block' }}>
+                  —
+                </Typography>
+              )}
+            </Box>
+          </Box>
+
+          {/* Right contact */}
+          <Box sx={{ textAlign: 'right', minWidth: 200 }}>
+            <ContactLine icon={<Email sx={{ fontSize: 14, color: accent }} />} text={email || '—'} />
+            <ContactLine icon={<Phone sx={{ fontSize: 14, color: accent }} />} text={phone || '—'} />
+            {website ? (
+              <ContactLine icon={<Language sx={{ fontSize: 14, color: accent }} />} text={website} />
+            ) : null}
+          </Box>
+        </Box>
+
+        {/* Clean brand divider */}
+        <Box sx={{ mt: 1.25, height: 2, borderRadius: 999, background: primary }} />
+
+        {/* Clinics line (highlight) */}
         <Box
           sx={{
-            width: 56,
-            height: 56,
-            borderRadius: 2,
-            border: `1px solid rgba(0,0,0,0.10)`,
-            display: 'grid',
-            placeItems: 'center',
-            overflow: 'hidden',
-            background: '#fff',
+            mt: 1,
+            px: 1,
+            py: 0.5,
+            borderRadius: 1,
+            background: `${accent}14`,
+            textAlign: 'center',
           }}
         >
-          {logoDataUrl ? (
-            <Box component="img" src={logoDataUrl} alt="Logo" sx={{ width: '100%', height: '100%', objectFit: 'contain' }} />
-          ) : (
-            <Typography sx={{ fontWeight: 900, color: primary }}>HH</Typography>
-          )}
-        </Box>
-
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="h5" sx={{ fontWeight: 900, letterSpacing: 0.5 }}>
-            {clinicName || 'Clinic'}
+          <Typography
+            variant="caption"
+            sx={{
+              display: 'block',
+              fontWeight: 900,
+              color: accent,
+              letterSpacing: 0.3,
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              textAlign: 'center',
+            }}
+          >
+            Hearing Hope Clinics: Rohini • Green Park • Indirapuram • Sanjay Nagar (Ghaziabad)
           </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(0,0,0,0.70)', fontWeight: 700 }}>
-            {tagline || ''}
-          </Typography>
-          <Typography variant="caption" sx={{ color: 'rgba(0,0,0,0.60)' }}>
-            {address || ''}
-          </Typography>
-        </Box>
-
-        <Box sx={{ textAlign: 'right' }}>
-          <Typography variant="caption" sx={{ color: 'rgba(0,0,0,0.70)' }}>
-            <b style={{ color: accent }}>Phone:</b> {phone || '—'}
-          </Typography>
-          <br />
-          <Typography variant="caption" sx={{ color: 'rgba(0,0,0,0.70)' }}>
-            <b style={{ color: accent }}>Email:</b> {email || '—'}
-          </Typography>
-          {website ? (
-            <>
-              <br />
-              <Typography variant="caption" sx={{ color: 'rgba(0,0,0,0.70)' }}>
-                <b style={{ color: accent }}>Web:</b> {website}
-              </Typography>
-            </>
-          ) : null}
         </Box>
       </Box>
+
+      {/* Sub-divider + report title */}
+      <Box sx={{ mt: 1.25 }}>
+        <Box sx={{ height: 2, background: 'rgba(0,0,0,0.08)' }} />
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mt: 0.75 }}>
+          <Typography
+            variant="subtitle2"
+            sx={{
+              fontWeight: 900,
+              letterSpacing: 1,
+              textTransform: 'uppercase',
+              color: accent,
+            }}
+          >
+            Pure Tone Audiometry Report
+          </Typography>
+        </Box>
+      </Box>
+    </Box>
+  )
+}
+
+function ContactLine({ icon, text }: { icon: React.ReactNode; text: string }) {
+  return (
+    <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 0.75 }}>
+      {icon}
+      <Typography variant="caption" sx={{ color: 'rgba(0,0,0,0.75)', fontWeight: 700 }}>
+        {text}
+      </Typography>
     </Box>
   )
 }
@@ -127,31 +225,62 @@ function Header({
 function PatientBlock({ report }: { report: ReportDoc }) {
   const p = report.patient
   return (
-    <Paper sx={{ p: 2 }} variant="outlined">
-      <Box sx={{ display: 'grid', gap: 1, gridTemplateColumns: 'repeat(12, 1fr)' }}>
-        <Box sx={{ gridColumn: 'span 6' }}>
-          <Typography sx={{ fontWeight: 800 }}>Patient:</Typography> {p.name || '—'}
-        </Box>
-        <Box sx={{ gridColumn: 'span 3' }}>
-          <Typography sx={{ fontWeight: 800 }}>Age:</Typography> {p.age ?? '—'}
-        </Box>
-        <Box sx={{ gridColumn: 'span 3' }}>
-          <Typography sx={{ fontWeight: 800 }}>Gender:</Typography> {p.gender || '—'}
-        </Box>
-        <Box sx={{ gridColumn: 'span 6' }}>
-          <Typography sx={{ fontWeight: 800 }}>Reg No:</Typography> {p.registrationNumber || '—'}
-        </Box>
-        <Box sx={{ gridColumn: 'span 6' }}>
-          <Typography sx={{ fontWeight: 800 }}>Date:</Typography> {p.dateOfTest || '—'}
-        </Box>
-        <Box sx={{ gridColumn: 'span 12' }}>
-          <Typography sx={{ fontWeight: 800 }}>Referred By:</Typography> {p.referredBy || '—'}
-        </Box>
-        <Box sx={{ gridColumn: 'span 12' }}>
-          <Typography sx={{ fontWeight: 800 }}>Brief History:</Typography> {p.briefHistory || '—'}
-        </Box>
+    <Paper sx={{ p: 1.5 }} variant="outlined">
+      <Box sx={{ display: 'grid', gap: 0.75, gridTemplateColumns: 'repeat(12, 1fr)' }}>
+        <InfoField label="Patient" value={p.name || '—'} sx={{ gridColumn: 'span 6' }} />
+        <InfoField label="Age" value={p.age ?? '—'} sx={{ gridColumn: 'span 3' }} />
+        <InfoField label="Gender" value={p.gender || '—'} sx={{ gridColumn: 'span 3' }} />
+
+        <InfoField label="Reg No" value={p.registrationNumber || '—'} sx={{ gridColumn: 'span 6' }} />
+        <InfoField label="Date" value={p.dateOfTest || '—'} sx={{ gridColumn: 'span 6' }} />
+
+        <InfoField
+          label="Referred By"
+          value={p.referredBy || '—'}
+          sx={{ gridColumn: 'span 12' }}
+          truncate
+        />
+        <InfoField
+          label="Brief History"
+          value={p.briefHistory || '—'}
+          sx={{ gridColumn: 'span 12' }}
+          truncate
+        />
       </Box>
     </Paper>
+  )
+}
+
+function InfoField({
+  label,
+  value,
+  sx,
+  truncate,
+}: {
+  label: string
+  value: unknown
+  sx?: any
+  truncate?: boolean
+}) {
+  return (
+    <Box sx={{ ...sx, minWidth: 0 }}>
+      <Typography variant="caption" sx={{ fontWeight: 900, color: 'rgba(0,0,0,0.70)' }}>
+        {label}
+      </Typography>
+      <Typography
+        variant="body2"
+        sx={{
+          fontWeight: 700,
+          color: 'rgba(0,0,0,0.85)',
+          lineHeight: 1.25,
+          ...(truncate
+            ? { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }
+            : null),
+        }}
+      >
+        {String(value)}
+      </Typography>
+    </Box>
   )
 }
 
@@ -209,24 +338,24 @@ function DiagnosisBlock({ report }: { report: ReportDoc }) {
   )
 }
 
-function Footer({ report, note, accent }: { report: ReportDoc; note: string; accent: string }) {
+function Footer({ report, note, accent: _accent }: { report: ReportDoc; note: string; accent: string }) {
   return (
     <Box sx={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
       <Typography variant="caption" sx={{ color: 'rgba(0,0,0,0.55)' }}>
         {note || '—'}
       </Typography>
-      <Box sx={{ textAlign: 'right' }}>
+      <Box sx={{ textAlign: 'center' }}>
         {report.diagnosis.signatureDataUrl ? (
           <Box
             component="img"
             src={report.diagnosis.signatureDataUrl}
             alt="Signature"
-            sx={{ height: 48, display: 'block', ml: 'auto' }}
+            sx={{ height: 48, display: 'block', mx: 'auto', mb: 0.5 }}
           />
         ) : (
-          <Box sx={{ height: 48 }} />
+          <Box sx={{ height: 48, mb: 0.5 }} />
         )}
-        <Typography sx={{ fontWeight: 900, color: accent }}>
+        <Typography sx={{ fontWeight: 900, color: '#000' }}>
           {report.diagnosis.audiologistName || 'Audiologist'}
         </Typography>
         {report.diagnosis.audiologistRciNumber ? (
@@ -234,9 +363,6 @@ function Footer({ report, note, accent }: { report: ReportDoc; note: string; acc
             RCI: {report.diagnosis.audiologistRciNumber}
           </Typography>
         ) : null}
-        <Typography variant="caption" sx={{ color: 'rgba(0,0,0,0.55)' }}>
-          (Signature)
-        </Typography>
       </Box>
     </Box>
   )

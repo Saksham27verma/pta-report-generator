@@ -18,6 +18,7 @@ import { AdditionalTestsForm } from '../components/report/AdditionalTestsForm'
 import { DiagnosisForm } from '../components/report/DiagnosisForm'
 import { PatientDetailsForm } from '../components/report/PatientDetailsForm'
 import { ReportPrintView } from '../components/pdf/ReportPrintView'
+import { AiDiagnosisAssistant } from '../components/ai/AiDiagnosisAssistant'
 import { createReport, getReport, normalizeTimestamps, updateReport } from '../services/reports'
 import type { ReportDoc } from '../types'
 import { defaultReport } from '../utils/reportDefaults'
@@ -196,6 +197,22 @@ export function ReportEditorPage({ mode }: { mode: 'new' | 'edit' }) {
         onPtaChange={(v) => setReport({ ...r, pta: v })}
         specialTests={r.specialTests}
         onSpecialTestsChange={(v) => setReport({ ...r, specialTests: v })}
+      />
+
+      <AiDiagnosisAssistant
+        audiometry={r.audiometry}
+        tuningFork={r.tuningFork}
+        onApplyToDiagnosis={(text) =>
+          setReport({
+            ...r,
+            diagnosis: {
+              ...r.diagnosis,
+              provisionalDiagnosis: r.diagnosis.provisionalDiagnosis
+                ? `${r.diagnosis.provisionalDiagnosis}\n\n${text}`
+                : text,
+            },
+          })
+        }
       />
 
       <DiagnosisForm

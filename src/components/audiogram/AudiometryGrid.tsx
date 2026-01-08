@@ -38,12 +38,24 @@ function setPoint(
   const point = next[ear][freq][type]
   next[ear][freq][type] = { ...point, ...patch }
   if (patch.nr === true) {
-    // If NR, keep db as max if empty to show it on chart.
-    if (next[ear][freq][type].db == null) next[ear][freq][type].db = 120
+    // NR should NOT create a definitive plotted threshold.
+    // We keep db unset so the chart line won't connect through it.
+    next[ear][freq][type].db = null
   }
   if (patch.db != null) {
     next[ear][freq][type].nr = false
   }
+
+  // Rule: BC cannot be worse than AC (i.e., BC dB should not be higher than AC dB).
+  // Only enforce when both values exist and neither is marked NR.
+  const ac = next[ear][freq].air
+  const bc = next[ear][freq].bone
+  if (ac.db != null && bc.db != null && !ac.nr && !bc.nr) {
+    if (bc.db > ac.db) {
+      bc.db = ac.db
+    }
+  }
+
   return next
 }
 
