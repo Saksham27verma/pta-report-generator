@@ -229,6 +229,11 @@ function Footer({ report, note, accent }: { report: ReportDoc; note: string; acc
         <Typography sx={{ fontWeight: 900, color: accent }}>
           {report.diagnosis.audiologistName || 'Audiologist'}
         </Typography>
+        {report.diagnosis.audiologistRciNumber ? (
+          <Typography variant="caption" sx={{ color: 'rgba(0,0,0,0.65)' }}>
+            RCI: {report.diagnosis.audiologistRciNumber}
+          </Typography>
+        ) : null}
         <Typography variant="caption" sx={{ color: 'rgba(0,0,0,0.55)' }}>
           (Signature)
         </Typography>

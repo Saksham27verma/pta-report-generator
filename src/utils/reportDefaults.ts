@@ -48,8 +48,10 @@ export function defaultReport(createdByUid: string): ReportDoc {
     diagnosis: {
       provisionalDiagnosis: '',
       recommendations: '',
+      audiologistId: null,
       signatureDataUrl: null,
       audiologistName: '',
+      audiologistRciNumber: '',
     },
   }
 }

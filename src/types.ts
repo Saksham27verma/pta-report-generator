@@ -55,8 +55,10 @@ export type PatientInfo = {
 export type Diagnosis = {
   provisionalDiagnosis: string
   recommendations: string
+  audiologistId: string | null
   signatureDataUrl: string | null
   audiologistName: string
+  audiologistRciNumber: string
 }
 
 export type ReportDoc = {
@@ -91,6 +93,13 @@ export type ClinicSettings = {
   primaryColor: string
   accentColor: string
   footerNote: string
+}
+
+export type AudiologistProfile = {
+  id: string
+  name: string
+  rciNumber: string
+  signatureDataUrl: string | null
 }
 
 

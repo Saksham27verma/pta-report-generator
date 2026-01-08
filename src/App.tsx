@@ -13,6 +13,7 @@ import { BrowserRouter, Route, Routes, useNavigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './auth/AuthContext'
 import { RequireAuth } from './auth/RequireAuth'
 import { ClinicSettingsProvider } from './clinic/ClinicSettingsContext'
+import { AudiologistsProvider } from './clinic/AudiologistsContext'
 import { DashboardPage } from './pages/DashboardPage'
 import { FirebaseSetupPage } from './pages/FirebaseSetupPage'
 import { LoginPage } from './pages/LoginPage'
@@ -26,57 +27,59 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <ClinicSettingsProvider>
-          <Shell>
-            <Routes>
-              {!isFirebaseConfigured ? (
-                <Route path="*" element={<FirebaseSetupPage />} />
-              ) : (
-                <>
-                  <Route path="/login" element={<LoginPage />} />
-                  <Route
-                    path="/"
-                    element={
-                      <RequireAuth>
-                        <DashboardPage />
-                      </RequireAuth>
-                    }
-                  />
-                  <Route
-                    path="/settings"
-                    element={
-                      <RequireAuth>
-                        <ClinicSettingsPage />
-                      </RequireAuth>
-                    }
-                  />
-                  <Route
-                    path="/reports/new"
-                    element={
-                      <RequireAuth>
-                        <ReportEditorPage mode="new" />
-                      </RequireAuth>
-                    }
-                  />
-                  <Route
-                    path="/reports/:reportId"
-                    element={
-                      <RequireAuth>
-                        <ReportEditorPage mode="edit" />
-                      </RequireAuth>
-                    }
-                  />
-                  <Route
-                    path="/reports/:reportId/preview"
-                    element={
-                      <RequireAuth>
-                        <ReportPreviewPage />
-                      </RequireAuth>
-                    }
-                  />
-                </>
-              )}
-            </Routes>
-          </Shell>
+          <AudiologistsProvider>
+            <Shell>
+              <Routes>
+                {!isFirebaseConfigured ? (
+                  <Route path="*" element={<FirebaseSetupPage />} />
+                ) : (
+                  <>
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route
+                      path="/"
+                      element={
+                        <RequireAuth>
+                          <DashboardPage />
+                        </RequireAuth>
+                      }
+                    />
+                    <Route
+                      path="/settings"
+                      element={
+                        <RequireAuth>
+                          <ClinicSettingsPage />
+                        </RequireAuth>
+                      }
+                    />
+                    <Route
+                      path="/reports/new"
+                      element={
+                        <RequireAuth>
+                          <ReportEditorPage mode="new" />
+                        </RequireAuth>
+                      }
+                    />
+                    <Route
+                      path="/reports/:reportId"
+                      element={
+                        <RequireAuth>
+                          <ReportEditorPage mode="edit" />
+                        </RequireAuth>
+                      }
+                    />
+                    <Route
+                      path="/reports/:reportId/preview"
+                      element={
+                        <RequireAuth>
+                          <ReportPreviewPage />
+                        </RequireAuth>
+                      }
+                    />
+                  </>
+                )}
+              </Routes>
+            </Shell>
+          </AudiologistsProvider>
         </ClinicSettingsProvider>
       </AuthProvider>
     </BrowserRouter>
