@@ -32,6 +32,8 @@ function toSummary(id: string, data: any): ReportSummary {
     patientName: data?.patient?.name ?? '',
     registrationNumber: data?.patient?.registrationNumber ?? '',
     dateOfTest: data?.patient?.dateOfTest ?? '',
+    audiologistId: data?.diagnosis?.audiologistId ?? null,
+    audiologistName: data?.diagnosis?.audiologistName ?? '',
   }
 }
 

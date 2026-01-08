@@ -5,11 +5,20 @@ import {
   Button,
   ButtonBase,
   Container,
+  Divider,
+  Drawer,
+  IconButton,
+  List,
+  ListItemButton,
+  ListItemText,
+  Stack,
   Toolbar,
   Typography,
 } from '@mui/material'
 import { Settings } from '@mui/icons-material'
-import { BrowserRouter, Route, Routes, useNavigate } from 'react-router-dom'
+import MenuIcon from '@mui/icons-material/Menu'
+import { useState } from 'react'
+import { BrowserRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './auth/AuthContext'
 import { RequireAuth } from './auth/RequireAuth'
 import { ClinicSettingsProvider } from './clinic/ClinicSettingsContext'
@@ -91,37 +100,101 @@ export default App
 function Shell({ children }: { children: React.ReactNode }) {
   const { user, logout } = useAuth()
   const nav = useNavigate()
+  const loc = useLocation()
+  const [drawerOpen, setDrawerOpen] = useState(false)
+
+  const isAuthRoute = loc.pathname.startsWith('/login')
   return (
     <Box sx={{ minHeight: '100vh' }}>
       <AppBar position="sticky" color="inherit" elevation={0}>
         <Toolbar sx={{ gap: 2 }}>
+          {user && !isAuthRoute ? (
+            <IconButton
+              onClick={() => setDrawerOpen(true)}
+              sx={{ display: { xs: 'inline-flex', md: 'none' } }}
+              aria-label="Open menu"
+            >
+              <MenuIcon />
+            </IconButton>
+          ) : null}
           <ButtonBase
             onClick={() => nav('/')}
             sx={{ borderRadius: 1, px: 0.5, py: 0.25, textAlign: 'left' }}
           >
-            <Typography variant="h6" sx={{ color: 'inherit', textDecoration: 'none' }}>
-              Hearing Hope • Audiology Reports
-            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1 }}>
+              <Typography variant="h6" sx={{ color: 'inherit', textDecoration: 'none' }}>
+                Hearing Hope
+              </Typography>
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ display: { xs: 'none', md: 'inline' } }}
+              >
+                • Audiology Reports
+              </Typography>
+            </Box>
           </ButtonBase>
           <Box sx={{ flex: 1 }} />
-          {user ? (
+          {user && !isAuthRoute ? (
             <Button
               variant="text"
               startIcon={<Settings />}
               onClick={() => nav('/settings')}
-              sx={{ mr: 1 }}
+              sx={{ display: { xs: 'none', md: 'inline-flex' } }}
             >
               Clinic Settings
             </Button>
           ) : null}
-          {user ? (
-            <Button variant="outlined" onClick={logout}>
+          {user && !isAuthRoute ? (
+            <Button
+              variant="outlined"
+              onClick={logout}
+              sx={{ display: { xs: 'none', md: 'inline-flex' } }}
+            >
               Logout
             </Button>
           ) : null}
         </Toolbar>
       </AppBar>
-      <Container sx={{ py: 3 }}>{children}</Container>
+
+      <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)} anchor="left">
+        <Box sx={{ width: 280, p: 1 }}>
+          <Typography sx={{ fontWeight: 900, px: 1, py: 1 }}>Menu</Typography>
+          <Divider />
+          <List>
+            <ListItemButton
+              onClick={() => {
+                nav('/')
+                setDrawerOpen(false)
+              }}
+            >
+              <ListItemText primary="Reports" />
+            </ListItemButton>
+            <ListItemButton
+              onClick={() => {
+                nav('/settings')
+                setDrawerOpen(false)
+              }}
+            >
+              <ListItemText primary="Clinic Settings" />
+            </ListItemButton>
+          </List>
+          <Divider />
+          <Stack sx={{ p: 1 }}>
+            <Button
+              variant="outlined"
+              onClick={async () => {
+                await logout()
+                setDrawerOpen(false)
+              }}
+            >
+              Logout
+            </Button>
+          </Stack>
+        </Box>
+      </Drawer>
+
+      <Container sx={{ py: { xs: 2, md: 3 } }}>{children}</Container>
     </Box>
   )
 }

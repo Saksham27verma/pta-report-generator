@@ -36,6 +36,7 @@ export function ReportEditorPage({ mode }: { mode: 'new' | 'edit' }) {
   const [report, setReport] = useState<ReportDoc | null>(null)
 
   const printRef = useRef<HTMLDivElement | null>(null)
+  const pdfRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     if (mode === 'new' && user && !report) {
@@ -112,63 +113,80 @@ export function ReportEditorPage({ mode }: { mode: 'new' | 'edit' }) {
 
   return (
     <Stack spacing={2}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-        <Button onClick={() => nav('/')} startIcon={<ArrowBack />} variant="text">
-          Back
-        </Button>
-        <Box sx={{ flex: 1 }}>
-          <Typography variant="h5">{mode === 'new' ? 'New Report' : 'Edit Report'}</Typography>
-          <Typography variant="body2" color="text.secondary">
-            Fill patient details, enter audiometry readings, review graphs, then export PDF.
-          </Typography>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: { xs: 'stretch', md: 'center' },
+          gap: 2,
+          flexDirection: { xs: 'column', md: 'row' },
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <Button onClick={() => nav('/')} startIcon={<ArrowBack />} variant="text">
+            Back
+          </Button>
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="h5">{mode === 'new' ? 'New Report' : 'Edit Report'}</Typography>
+            <Typography variant="body2" color="text.secondary">
+              Fill patient details, enter audiometry readings, review graphs, then export PDF.
+            </Typography>
+          </Box>
         </Box>
-        <Button
-          startIcon={<Save />}
-          variant="contained"
-          disabled={saving}
-          onClick={async () => {
-            if (!user) throw new Error('Not authenticated')
-            setSaving(true)
-            setError(null)
-            try {
-              const payload: ReportDoc = { ...r, createdByUid: user.uid }
-              if (mode === 'new') {
-                const id = await createReport(payload)
-                nav(`/reports/${id}`, { replace: true })
-              } else {
-                const id = reportId
-                if (!id) throw new Error('Missing report id')
-                await updateReport(id, payload)
+
+        <Box sx={{ flex: 1 }} />
+
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ width: { xs: '100%', md: 'auto' } }}>
+          <Button
+            startIcon={<Save />}
+            variant="contained"
+            disabled={saving}
+            fullWidth
+            onClick={async () => {
+              if (!user) throw new Error('Not authenticated')
+              setSaving(true)
+              setError(null)
+              try {
+                const payload: ReportDoc = { ...r, createdByUid: user.uid }
+                if (mode === 'new') {
+                  const id = await createReport(payload)
+                  nav(`/reports/${id}`, { replace: true })
+                } else {
+                  const id = reportId
+                  if (!id) throw new Error('Missing report id')
+                  await updateReport(id, payload)
+                }
+              } catch (e: any) {
+                setError(e?.message ?? 'Save failed')
+              } finally {
+                setSaving(false)
               }
-            } catch (e: any) {
-              setError(e?.message ?? 'Save failed')
-            } finally {
-              setSaving(false)
-            }
-          }}
-        >
-          Save
-        </Button>
-        <Button
-          startIcon={<Download />}
-          variant="outlined"
-          onClick={async () => {
-            if (!printRef.current) return
-            await downloadPdfFromElement(printRef.current, pdfFilename)
-          }}
-        >
-          Generate PDF
-        </Button>
-        <Button
-          startIcon={<WhatsApp />}
-          variant="outlined"
-          onClick={() => {
-            const msg = `Audiology Report: ${r.patient.name || 'Patient'} (${r.patient.dateOfTest || ''}). Please find the attached PDF.`
-            window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank')
-          }}
-        >
-          WhatsApp
-        </Button>
+            }}
+          >
+            Save
+          </Button>
+          <Button
+            startIcon={<Download />}
+            variant="outlined"
+            fullWidth
+            onClick={async () => {
+              if (!pdfRef.current) return
+              await downloadPdfFromElement(pdfRef.current, pdfFilename)
+            }}
+          >
+            Generate PDF
+          </Button>
+          <Button
+            startIcon={<WhatsApp />}
+            variant="outlined"
+            fullWidth
+            onClick={() => {
+              const msg = `Audiology Report: ${r.patient.name || 'Patient'} (${r.patient.dateOfTest || ''}). Please find the attached PDF.`
+              window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank')
+            }}
+          >
+            WhatsApp
+          </Button>
+        </Stack>
       </Box>
 
       {error ? <Alert severity="error">{error}</Alert> : null}
@@ -222,7 +240,7 @@ export function ReportEditorPage({ mode }: { mode: 'new' | 'edit' }) {
 
       <Divider />
 
-      <Paper sx={{ p: 2 }}>
+      <Paper sx={{ p: 2, display: { xs: 'none', md: 'block' } }}>
         <Typography variant="h6" sx={{ mb: 1 }}>
           Print / PDF Layout Preview
         </Typography>
@@ -242,6 +260,20 @@ export function ReportEditorPage({ mode }: { mode: 'new' | 'edit' }) {
           </Box>
         </Box>
       </Paper>
+
+      {/* Hidden fixed-width render target for consistent PDF generation across devices */}
+      <Box
+        ref={pdfRef}
+        sx={{
+          position: 'fixed',
+          left: -10000,
+          top: 0,
+          width: 794,
+          background: '#fff',
+        }}
+      >
+        <ReportPrintView report={r} />
+      </Box>
     </Stack>
   )
 }

@@ -80,6 +80,8 @@ export type ReportSummary = {
   patientName: string
   registrationNumber: string
   dateOfTest: string
+  audiologistId?: string | null
+  audiologistName?: string
 }
 
 export type ClinicSettings = {

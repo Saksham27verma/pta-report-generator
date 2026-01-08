@@ -12,7 +12,8 @@ export function ReportPreviewPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [report, setReport] = useState<ReportDoc | null>(null)
-  const printRef = useRef<HTMLDivElement | null>(null)
+  const previewRef = useRef<HTMLDivElement | null>(null)
+  const pdfRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
     const id = reportId
@@ -68,7 +69,14 @@ export function ReportPreviewPage() {
 
   return (
     <Stack spacing={2}>
-      <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+      <Box
+        sx={{
+          display: 'flex',
+          gap: 1.5,
+          alignItems: { xs: 'stretch', md: 'center' },
+          flexDirection: { xs: 'column', md: 'row' },
+        }}
+      >
         <Button component={Link} to="/" startIcon={<ArrowBack />} variant="text">
           Back to Reports
         </Button>
@@ -78,30 +86,34 @@ export function ReportPreviewPage() {
             This is the final printable layout.
           </Typography>
         </Box>
-        <Button component={Link} to="/settings" startIcon={<Settings />} variant="text">
-          Branding
-        </Button>
-        <Button
-          component={Link}
-          to={`/reports/${report.id}`}
-          startIcon={<Edit />}
-          variant="outlined"
-        >
-          Edit
-        </Button>
-        <Button
-          startIcon={<Download />}
-          variant="contained"
-          onClick={async () => {
-            if (!printRef.current) return
-            await downloadPdfFromElement(printRef.current, pdfFilename)
-          }}
-        >
-          Generate PDF
-        </Button>
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+          <Button component={Link} to="/settings" startIcon={<Settings />} variant="outlined" fullWidth>
+            Branding
+          </Button>
+          <Button
+            component={Link}
+            to={`/reports/${report.id}`}
+            startIcon={<Edit />}
+            variant="outlined"
+            fullWidth
+          >
+            Edit
+          </Button>
+          <Button
+            startIcon={<Download />}
+            variant="contained"
+            fullWidth
+            onClick={async () => {
+              if (!pdfRef.current) return
+              await downloadPdfFromElement(pdfRef.current, pdfFilename)
+            }}
+          >
+            Generate PDF
+          </Button>
+        </Stack>
       </Box>
 
-      <Paper sx={{ p: 2 }}>
+      <Paper sx={{ p: 2, display: { xs: 'none', md: 'block' } }}>
         <Box
           sx={{
             overflowX: 'auto',
@@ -110,11 +122,25 @@ export function ReportPreviewPage() {
             background: '#f6f6f6',
           }}
         >
-          <Box ref={printRef} sx={{ display: 'inline-block' }}>
+          <Box ref={previewRef} sx={{ display: 'inline-block' }}>
             <ReportPrintView report={report} />
           </Box>
         </Box>
       </Paper>
+
+      {/* Hidden fixed-width render target for consistent PDF generation across devices */}
+      <Box
+        ref={pdfRef}
+        sx={{
+          position: 'fixed',
+          left: -10000,
+          top: 0,
+          width: 794,
+          background: '#fff',
+        }}
+      >
+        <ReportPrintView report={report} />
+      </Box>
     </Stack>
   )
 }

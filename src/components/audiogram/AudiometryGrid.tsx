@@ -14,6 +14,9 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
+import { useMediaQuery } from '@mui/material'
+import { useTheme } from '@mui/material/styles'
+import { useMemo, useState } from 'react'
 import type { AudiometryData, AudioFrequency, ConductionType, EarSide } from '../../types'
 import { AUDIO_FREQS } from '../../types'
 
@@ -60,6 +63,11 @@ function setPoint(
 }
 
 export function AudiometryGrid({ value, onChange }: Props) {
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'))
+  const [freqIdx, setFreqIdx] = useState(0)
+  const freq = AUDIO_FREQS[Math.min(freqIdx, AUDIO_FREQS.length - 1)]
+
   return (
     <Paper sx={{ p: 2 }}>
       <Stack spacing={1.5}>
@@ -84,10 +92,30 @@ export function AudiometryGrid({ value, onChange }: Props) {
           </Button>
         </Box>
 
-        <Table size="small">
-          <TableHead>
+        {isMobile ? (
+          <MobileCardEntry
+            freq={freq}
+            freqIdx={freqIdx}
+            setFreqIdx={setFreqIdx}
+            value={value}
+            onChange={onChange}
+          />
+        ) : (
+        <Box sx={{ overflowX: 'auto' }}>
+          <Table size="small" sx={{ minWidth: 980 }}>
+            <TableHead>
             <TableRow>
-              <TableCell sx={{ fontWeight: 800 }}>Hz</TableCell>
+              <TableCell
+                sx={{
+                  fontWeight: 800,
+                  position: 'sticky',
+                  left: 0,
+                  zIndex: 2,
+                  background: '#fff',
+                }}
+              >
+                Hz
+              </TableCell>
               <TableCell sx={{ fontWeight: 800 }} colSpan={3}>
                 Right Air (AC)
               </TableCell>
@@ -102,7 +130,14 @@ export function AudiometryGrid({ value, onChange }: Props) {
               </TableCell>
             </TableRow>
             <TableRow>
-              <TableCell />
+              <TableCell
+                sx={{
+                  position: 'sticky',
+                  left: 0,
+                  zIndex: 2,
+                  background: '#fff',
+                }}
+              />
               {Array.from({ length: 4 }).flatMap((_, i) => [
                 <TableCell key={`db-${i}`} sx={{ fontWeight: 700 }}>
                   dB
@@ -115,13 +150,15 @@ export function AudiometryGrid({ value, onChange }: Props) {
                 </TableCell>,
               ])}
             </TableRow>
-          </TableHead>
-          <TableBody>
-            {AUDIO_FREQS.map((freq) => (
-              <Row key={freq} freq={freq} value={value} onChange={onChange} />
-            ))}
-          </TableBody>
-        </Table>
+            </TableHead>
+            <TableBody>
+              {AUDIO_FREQS.map((freq) => (
+                <Row key={freq} freq={freq} value={value} onChange={onChange} />
+              ))}
+            </TableBody>
+          </Table>
+        </Box>
+        )}
       </Stack>
     </Paper>
   )
@@ -138,7 +175,17 @@ function Row({
 }) {
   return (
     <TableRow>
-      <TableCell sx={{ fontWeight: 800 }}>{freq}</TableCell>
+      <TableCell
+        sx={{
+          fontWeight: 900,
+          position: 'sticky',
+          left: 0,
+          zIndex: 1,
+          background: '#fff',
+        }}
+      >
+        {freq}
+      </TableCell>
       <Cell ear="right" type="air" freq={freq} value={value} onChange={onChange} />
       <Cell ear="right" type="bone" freq={freq} value={value} onChange={onChange} />
       <Cell ear="left" type="air" freq={freq} value={value} onChange={onChange} />
@@ -172,7 +219,7 @@ function Cell({
             const n = clampDb(Number(raw))
             onChange(setPoint(value, ear, freq, type, { db: n }))
           }}
-          inputProps={{ inputMode: 'numeric', pattern: '[0-9]*', style: { width: 70 } }}
+          inputProps={{ inputMode: 'numeric', pattern: '[0-9]*', style: { width: 56 } }}
           size="small"
           disabled={p.nr}
         />
@@ -202,4 +249,138 @@ function Cell({
   )
 }
 
+function MobileCardEntry({
+  freq,
+  freqIdx,
+  setFreqIdx,
+  value,
+  onChange,
+}: {
+  freq: AudioFrequency
+  freqIdx: number
+  setFreqIdx: (n: number) => void
+  value: AudiometryData
+  onChange: (next: AudiometryData) => void
+}) {
+  const freqs = useMemo(() => AUDIO_FREQS, [])
+  const right = value.right[freq]
+  const left = value.left[freq]
+
+  return (
+    <Stack spacing={1.5}>
+      <Box sx={{ display: 'flex', gap: 1, overflowX: 'auto', pb: 0.5 }}>
+        {freqs.map((f, i) => (
+          <Button
+            key={f}
+            size="small"
+            variant={i === freqIdx ? 'contained' : 'outlined'}
+            onClick={() => setFreqIdx(i)}
+            sx={{ flex: '0 0 auto', minWidth: 84 }}
+          >
+            {f} Hz
+          </Button>
+        ))}
+      </Box>
+
+      <Paper variant="outlined" sx={{ p: 1.5 }}>
+        <Typography sx={{ fontWeight: 900, mb: 1 }}>Frequency: {freq} Hz</Typography>
+
+        <Stack spacing={1.5}>
+          <EarCard
+            title="Right Ear"
+            ac={right.air}
+            bc={right.bone}
+            onChangeAc={(patch) => onChange(setPoint(value, 'right', freq, 'air', patch))}
+            onChangeBc={(patch) => onChange(setPoint(value, 'right', freq, 'bone', patch))}
+          />
+          <EarCard
+            title="Left Ear"
+            ac={left.air}
+            bc={left.bone}
+            onChangeAc={(patch) => onChange(setPoint(value, 'left', freq, 'air', patch))}
+            onChangeBc={(patch) => onChange(setPoint(value, 'left', freq, 'bone', patch))}
+          />
+        </Stack>
+      </Paper>
+    </Stack>
+  )
+}
+
+function EarCard({
+  title,
+  ac,
+  bc,
+  onChangeAc,
+  onChangeBc,
+}: {
+  title: string
+  ac: { db: number | null; masked: boolean; nr: boolean }
+  bc: { db: number | null; masked: boolean; nr: boolean }
+  onChangeAc: (patch: Partial<{ db: number | null; masked: boolean; nr: boolean }>) => void
+  onChangeBc: (patch: Partial<{ db: number | null; masked: boolean; nr: boolean }>) => void
+}) {
+  return (
+    <Paper variant="outlined" sx={{ p: 1.25 }}>
+      <Typography sx={{ fontWeight: 900, mb: 1 }}>{title}</Typography>
+      <Stack spacing={1.25}>
+        <RowCard label="Air (AC)" p={ac} onChange={onChangeAc} />
+        <RowCard label="Bone (BC)" p={bc} onChange={onChangeBc} />
+      </Stack>
+    </Paper>
+  )
+}
+
+function RowCard({
+  label,
+  p,
+  onChange,
+}: {
+  label: string
+  p: { db: number | null; masked: boolean; nr: boolean }
+  onChange: (patch: Partial<{ db: number | null; masked: boolean; nr: boolean }>) => void
+}) {
+  return (
+    <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 110px', gap: 1, alignItems: 'center' }}>
+      <Box>
+        <Typography variant="caption" sx={{ fontWeight: 900, color: 'rgba(0,0,0,0.65)' }}>
+          {label}
+        </Typography>
+        <TextField
+          value={p.db ?? ''}
+          onChange={(e) => {
+            const raw = e.target.value
+            if (raw === '') return onChange({ db: null })
+            const n = clampDb(Number(raw))
+            onChange({ db: n })
+          }}
+          inputProps={{ inputMode: 'numeric', pattern: '[0-9]*' }}
+          size="small"
+          disabled={p.nr}
+          fullWidth
+          placeholder="dB"
+        />
+      </Box>
+      <Stack spacing={0.5}>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={p.masked}
+              onChange={(e) => onChange({ masked: e.target.checked })}
+              size="small"
+            />
+          }
+          label={<Typography variant="caption">Masked</Typography>}
+          sx={{ m: 0 }}
+        />
+        <FormControlLabel
+          control={
+            <Checkbox checked={p.nr} onChange={(e) => onChange({ nr: e.target.checked })} size="small" />
+          }
+          label={<Typography variant="caption">NR</Typography>}
+          sx={{ m: 0 }}
+        />
+      </Stack>
+    </Box>
+  )
+}
 
