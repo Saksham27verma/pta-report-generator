@@ -16,6 +16,7 @@ import { AUDIO_FREQS } from '../../types'
 import { textPointStyle } from './pointStyles'
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler)
+ChartJS.defaults.font.family = 'Roboto, Arial, sans-serif'
 
 type Props = {
   ear: EarSide
@@ -103,6 +104,8 @@ export function AudiogramChart({ ear, data, title, height = 320 }: Props) {
     responsive: true,
     maintainAspectRatio: false,
     animation: false,
+    // Keep chart rendering consistent across devices (mobile DPR vs desktop DPR).
+    devicePixelRatio: 2,
     plugins: {
       legend: { display: false },
       tooltip: {
@@ -137,7 +140,7 @@ export function AudiogramChart({ ear, data, title, height = 320 }: Props) {
     afterDatasetsDraw(chart: any) {
       const ctx = chart.ctx
       ctx.save()
-      ctx.font = '800 11px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif'
+      ctx.font = '800 11px Roboto, Arial, sans-serif'
       ctx.textAlign = 'center'
       ctx.textBaseline = 'middle'
 

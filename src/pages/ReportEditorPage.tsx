@@ -12,6 +12,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import { useClinicSettings } from '../clinic/ClinicSettingsContext'
 import { AudiogramPair } from '../components/audiogram/AudiogramPair'
 import { AudiometryGrid } from '../components/audiogram/AudiometryGrid'
 import { AdditionalTestsForm } from '../components/report/AdditionalTestsForm'
@@ -23,16 +24,18 @@ import { createReport, getReport, normalizeTimestamps, updateReport } from '../s
 import type { ReportDoc } from '../types'
 import { defaultReport } from '../utils/reportDefaults'
 import { calculatePtaFromAudiometry } from '../utils/pta'
-import { downloadPdfFromElement } from '../utils/pdf'
+import { createPdfBlobFromElement, downloadPdfFromElement } from '../utils/pdf'
 
 export function ReportEditorPage({ mode }: { mode: 'new' | 'edit' }) {
   const { user } = useAuth()
+  const { settings: clinicSettings } = useClinicSettings()
   const nav = useNavigate()
   const { reportId } = useParams()
 
   const [loading, setLoading] = useState(mode === 'edit')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [info, setInfo] = useState<string | null>(null)
   const [report, setReport] = useState<ReportDoc | null>(null)
 
   const printRef = useRef<HTMLDivElement | null>(null)
@@ -179,8 +182,40 @@ export function ReportEditorPage({ mode }: { mode: 'new' | 'edit' }) {
             startIcon={<WhatsApp />}
             variant="outlined"
             fullWidth
-            onClick={() => {
-              const msg = `Audiology Report: ${r.patient.name || 'Patient'} (${r.patient.dateOfTest || ''}). Please find the attached PDF.`
+            onClick={async () => {
+              setInfo(null)
+              const template =
+                clinicSettings.whatsappMessageTemplate ||
+                'Audiology Report: {patientName} ({date}). Please find the attached PDF.'
+              const msg = template
+                .replaceAll('{patientName}', r.patient.name || 'Patient')
+                .replaceAll('{date}', r.patient.dateOfTest || '')
+                .replaceAll('{reportId}', String(reportId ?? r.id ?? ''))
+
+              // WhatsApp "click to chat" URL can only prefill text; it cannot attach files.
+              // On mobile, use Web Share API to share the generated PDF file directly.
+              if (pdfRef.current) {
+                try {
+                  const blob = await createPdfBlobFromElement(pdfRef.current)
+                  const file = new File([blob], pdfFilename, { type: 'application/pdf' })
+                  const navAny = navigator as any
+                  if (navAny?.share && navAny?.canShare?.({ files: [file] })) {
+                    await navAny.share({
+                      files: [file],
+                      text: msg,
+                      title: pdfFilename,
+                    })
+                    return
+                  }
+
+                  // Fallback: download locally, then open WhatsApp with prefilled text.
+                  await downloadPdfFromElement(pdfRef.current, pdfFilename)
+                  setInfo('PDF downloaded. WhatsApp will open—please attach the downloaded PDF manually.')
+                } catch {
+                  // ignore and fall back to text-only
+                }
+              }
+
               window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank')
             }}
           >
@@ -190,6 +225,7 @@ export function ReportEditorPage({ mode }: { mode: 'new' | 'edit' }) {
       </Box>
 
       {error ? <Alert severity="error">{error}</Alert> : null}
+      {info ? <Alert severity="info">{info}</Alert> : null}
 
       <PatientDetailsForm
         value={r.patient}

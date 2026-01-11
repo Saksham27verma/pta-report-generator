@@ -17,6 +17,10 @@ export function ReportPrintView({ report }: { report: ReportDoc }) {
         background: '#fff',
         color: '#111',
         p: 2,
+        // Prevent mobile browsers from auto-resizing text (causes mismatched PDF layout).
+        WebkitTextSizeAdjust: '100%',
+        textSizeAdjust: '100%',
+        fontFamily: 'Roboto, Arial, sans-serif',
       }}
     >
       <Header
@@ -33,7 +37,7 @@ export function ReportPrintView({ report }: { report: ReportDoc }) {
       <Divider sx={{ my: 1.5 }} />
       <PatientBlock report={report} />
       <Box sx={{ my: 1.5 }}>
-        <AudiogramPair data={report.audiometry} chartHeight={250} />
+        <AudiogramPair data={report.audiometry} chartHeight={250} layout="fixed" />
       </Box>
       <Box sx={{ my: 1.5 }}>
         <TestsTable report={report} />
@@ -295,7 +299,8 @@ function TestsTable({ report }: { report: ReportDoc }) {
         sx={{
           display: 'grid',
           gap: 1,
-          gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' },
+          // Do NOT use responsive breakpoints in print/PDF layout; it must match across devices.
+          gridTemplateColumns: '1fr 1fr 1fr',
         }}
       >
         <Box>

@@ -2,13 +2,21 @@ import { Box, Paper } from '@mui/material'
 import type { AudiometryData } from '../../types'
 import { AudiogramChart } from './AudiogramChart'
 
-export function AudiogramPair({ data, chartHeight }: { data: AudiometryData; chartHeight?: number }) {
+export function AudiogramPair({
+  data,
+  chartHeight,
+  layout = 'responsive',
+}: {
+  data: AudiometryData
+  chartHeight?: number
+  layout?: 'responsive' | 'fixed'
+}) {
   return (
     <Box
       sx={{
         display: 'grid',
         gap: 2,
-        gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+        gridTemplateColumns: layout === 'fixed' ? '1fr 1fr' : { xs: '1fr', md: '1fr 1fr' },
       }}
     >
       <Box>

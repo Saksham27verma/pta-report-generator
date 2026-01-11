@@ -15,6 +15,9 @@ export function defaultClinicSettings(): ClinicSettings {
     primaryColor: DEFAULT_PRIMARY,
     accentColor: DEFAULT_ACCENT,
     footerNote: 'This report is computer generated and intended for clinical correlation.',
+    whatsappMessageTemplate:
+      'Audiology Report: {patientName} ({date}). Please find the attached PDF.',
+    settingsAccess: null,
   }
 }
 

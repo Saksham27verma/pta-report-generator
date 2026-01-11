@@ -95,6 +95,13 @@ export type ClinicSettings = {
   primaryColor: string
   accentColor: string
   footerNote: string
+  /** WhatsApp message template used when sharing a report. */
+  whatsappMessageTemplate: string
+  /**
+   * Optional password gate for opening the Clinic Settings page.
+   * Stored as salted hash (never store plaintext password).
+   */
+  settingsAccess?: { salt: string; hash: string; updatedAt?: any } | null
 }
 
 export type AudiologistProfile = {

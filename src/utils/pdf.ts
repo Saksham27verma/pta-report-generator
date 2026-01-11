@@ -1,14 +1,17 @@
 import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
 
-export async function downloadPdfFromElement(
-  el: HTMLElement,
-  filename: string,
-): Promise<void> {
+export async function createPdfBlobFromElement(el: HTMLElement): Promise<Blob> {
   const canvas = await html2canvas(el, {
     scale: 2,
     useCORS: true,
     backgroundColor: '#ffffff',
+    // Force "desktop" media queries / MUI breakpoint CSS so mobile PDFs match laptop layout.
+    // (MUI sx breakpoint objects compile to @media (min-width: ...), which depends on viewport width.)
+    windowWidth: 1200,
+    windowHeight: 1700,
+    scrollX: 0,
+    scrollY: 0,
   })
   const imgData = canvas.toDataURL('image/png')
 
@@ -29,7 +32,22 @@ export async function downloadPdfFromElement(
   const y = (pageHeight - imgHeight) / 2
   pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight)
 
-  pdf.save(filename)
+  return pdf.output('blob')
+}
+
+export async function downloadPdfFromElement(el: HTMLElement, filename: string): Promise<void> {
+  const blob = await createPdfBlobFromElement(el)
+  const url = URL.createObjectURL(blob)
+  try {
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+  } finally {
+    URL.revokeObjectURL(url)
+  }
 }
 
 
