@@ -15,7 +15,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { useAudiologists } from '../clinic/AudiologistsContext'
 import { firebaseProjectId } from '../firebase'
-import { listReportsForUser } from '../services/reports'
+import { listReports } from '../services/reports'
 import type { ReportSummary } from '../types'
 import { Search } from '@mui/icons-material'
 
@@ -65,7 +65,7 @@ export function DashboardPage() {
       setLoading(true)
       setError(null)
       try {
-        const res = await listReportsForUser(user.uid)
+        const res = await listReports()
         if (mounted) setItems(res)
       } catch (e: any) {
         if (mounted)

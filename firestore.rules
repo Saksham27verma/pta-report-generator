@@ -6,9 +6,13 @@ service cloud.firestore {
       allow create: if request.auth != null
         && request.resource.data.createdByUid == request.auth.uid;
 
-      // Only the creator can read/update/delete their reports.
-      allow read, update, delete: if request.auth != null
-        && resource.data.createdByUid == request.auth.uid;
+      // Shared clinic access: any logged-in staff can read reports.
+      allow read: if request.auth != null;
+
+      // Shared clinic access: allow any logged-in staff to update/delete reports,
+      // but prevent changing the original creator UID.
+      allow update, delete: if request.auth != null
+        && request.resource.data.createdByUid == resource.data.createdByUid;
     }
 
     // Per-staff clinic branding/settings (logo, address, colors, etc.)

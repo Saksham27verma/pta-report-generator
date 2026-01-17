@@ -8,7 +8,6 @@ import {
   query,
   serverTimestamp,
   updateDoc,
-  where,
 } from 'firebase/firestore'
 import { db } from '../firebase'
 import type { ReportDoc, ReportSummary } from '../types'
@@ -60,15 +59,19 @@ export async function getReport(reportId: string): Promise<ReportDoc | null> {
   return { ...(data as any), id: snap.id } as ReportDoc
 }
 
-export async function listReportsForUser(uid: string): Promise<ReportSummary[]> {
+export async function listReports(): Promise<ReportSummary[]> {
   const col = collection(requireDb(), REPORTS)
   // Avoid composite index requirements by not ordering on a separate field.
   // We'll sort client-side using dateOfTest (string YYYY-MM-DD) where available.
-  const q = query(col, where('createdByUid', '==', uid))
-  const res = await getDocs(q)
+  const res = await getDocs(query(col))
   const items = res.docs.map((d) => toSummary(d.id, d.data()))
   items.sort((a, b) => (b.dateOfTest || '').localeCompare(a.dateOfTest || ''))
   return items
+}
+
+// Back-compat: old name used by the dashboard. Now returns all reports for shared-clinic access.
+export async function listReportsForUser(_uid: string): Promise<ReportSummary[]> {
+  return listReports()
 }
 
 export function normalizeTimestamps(report: ReportDoc): ReportDoc {
