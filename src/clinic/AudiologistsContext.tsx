@@ -40,13 +40,15 @@ export function AudiologistsProvider({ children }: { children: React.ReactNode }
     try {
       const shared = await listAudiologistsShared()
 
-      // Auto-migrate: if shared list is empty, and this user has legacy audiologists,
-      // copy them into the shared collection. (Run this once by logging in with the old account.)
-      if (shared.length === 0) {
-        const legacy = await listAudiologistsLegacy(user.uid)
-        if (legacy.length) {
+      // Auto-migrate (safe): if this user has legacy audiologists, upsert any that are missing in shared.
+      // (Log in once with the old account to copy its saved audiologists.)
+      const legacy = await listAudiologistsLegacy(user.uid)
+      if (legacy.length) {
+        const sharedIds = new Set(shared.map((a) => a.id))
+        const toUpsert = legacy.filter((a) => !sharedIds.has(a.id))
+        if (toUpsert.length) {
           await Promise.all(
-            legacy.map((a) =>
+            toUpsert.map((a) =>
               upsertAudiologistSharedWithId(a.id, {
                 name: a.name,
                 rciNumber: a.rciNumber,
@@ -60,9 +62,7 @@ export function AudiologistsProvider({ children }: { children: React.ReactNode }
         } else {
           setItems(shared)
         }
-      } else {
-        setItems(shared)
-      }
+      } else setItems(shared)
     } catch (e: any) {
       setError({ message: e?.message ?? 'Failed to load audiologists', code: e?.code })
       setItems([])

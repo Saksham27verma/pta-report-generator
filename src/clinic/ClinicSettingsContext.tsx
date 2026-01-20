@@ -24,6 +24,34 @@ export function ClinicSettingsProvider({ children }: { children: React.ReactNode
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<{ message: string; code?: string } | null>(null)
 
+  function mergeLegacyIntoShared(shared: ClinicSettings, legacy: ClinicSettings): ClinicSettings {
+    const def = defaultClinicSettings()
+    // If shared values are still defaults, prefer legacy values.
+    const pick = <K extends keyof ClinicSettings>(k: K): ClinicSettings[K] => {
+      const s = shared[k]
+      const l = legacy[k]
+      const d = def[k]
+      const isDefaultish = JSON.stringify(s) === JSON.stringify(d)
+      return (isDefaultish ? l : s) as ClinicSettings[K]
+    }
+
+    return {
+      ...shared,
+      clinicName: pick('clinicName'),
+      tagline: pick('tagline'),
+      address: pick('address'),
+      phone: pick('phone'),
+      email: pick('email'),
+      website: pick('website'),
+      logoDataUrl: pick('logoDataUrl'),
+      primaryColor: pick('primaryColor'),
+      accentColor: pick('accentColor'),
+      footerNote: pick('footerNote'),
+      whatsappMessageTemplate: pick('whatsappMessageTemplate'),
+      settingsAccess: shared.settingsAccess ?? legacy.settingsAccess ?? null,
+    }
+  }
+
   async function refresh() {
     if (!user) {
       setSettings(defaultClinicSettings())
@@ -36,23 +64,18 @@ export function ClinicSettingsProvider({ children }: { children: React.ReactNode
     try {
       const shared = await getClinicSettingsShared()
 
-      // One-time migration: if shared doc doesn't exist yet (i.e. we got defaults),
-      // copy the current user's legacy settings into shared.
-      const isDefaultShared =
-        JSON.stringify(shared) === JSON.stringify(defaultClinicSettings())
-
-      if (isDefaultShared) {
-        const legacy = await getClinicSettingsLegacy(user.uid)
-        if (legacy) {
-          await saveClinicSettingsShared(legacy)
-          const sharedAfter = await getClinicSettingsShared()
-          setSettings(sharedAfter)
+      // Migration/merge: if this user has legacy settings, merge them into shared
+      // but only overwrite shared fields that are still "default-ish".
+      const legacy = await getClinicSettingsLegacy(user.uid)
+      if (legacy) {
+        const merged = mergeLegacyIntoShared(shared, legacy)
+        if (JSON.stringify(merged) !== JSON.stringify(shared)) {
+          await saveClinicSettingsShared(merged)
+          setSettings(merged)
         } else {
           setSettings(shared)
         }
-      } else {
-        setSettings(shared)
-      }
+      } else setSettings(shared)
     } catch (e: any) {
       // Common: permission-denied if firestore.rules not updated/published
       setError({ message: e?.message ?? 'Failed to load clinic settings', code: e?.code })
