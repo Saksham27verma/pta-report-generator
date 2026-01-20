@@ -17,12 +17,18 @@ function requireDb() {
   return db
 }
 
-function audiologistsCol(uid: string) {
+// NEW: shared across logins (same clinic)
+function sharedAudiologistsCol() {
+  return collection(requireDb(), 'audiologists')
+}
+
+// LEGACY: stored per-UID (old behavior)
+function legacyAudiologistsCol(uid: string) {
   return collection(requireDb(), 'clinicSettings', uid, 'audiologists')
 }
 
-export async function listAudiologists(uid: string): Promise<AudiologistProfile[]> {
-  const col = audiologistsCol(uid)
+export async function listAudiologistsShared(): Promise<AudiologistProfile[]> {
+  const col = sharedAudiologistsCol()
   // Order by name for UX; index usually not required for simple orderBy without where.
   const q = query(col, orderBy('name', 'asc'))
   const res = await getDocs(q)
@@ -37,11 +43,8 @@ export async function listAudiologists(uid: string): Promise<AudiologistProfile[
   })
 }
 
-export async function createAudiologist(
-  uid: string,
-  input: Omit<AudiologistProfile, 'id'>,
-): Promise<string> {
-  const col = audiologistsCol(uid)
+export async function createAudiologistShared(input: Omit<AudiologistProfile, 'id'>): Promise<string> {
+  const col = sharedAudiologistsCol()
   const res = await addDoc(col, {
     ...input,
     createdAt: serverTimestamp(),
@@ -50,12 +53,8 @@ export async function createAudiologist(
   return res.id
 }
 
-export async function updateAudiologist(
-  uid: string,
-  id: string,
-  input: Omit<AudiologistProfile, 'id'>,
-): Promise<void> {
-  const ref = doc(requireDb(), 'clinicSettings', uid, 'audiologists', id)
+export async function updateAudiologistShared(id: string, input: Omit<AudiologistProfile, 'id'>): Promise<void> {
+  const ref = doc(requireDb(), 'audiologists', id)
   await setDoc(
     ref,
     {
@@ -66,9 +65,43 @@ export async function updateAudiologist(
   )
 }
 
-export async function deleteAudiologist(uid: string, id: string): Promise<void> {
-  const ref = doc(requireDb(), 'clinicSettings', uid, 'audiologists', id)
+export async function deleteAudiologistShared(id: string): Promise<void> {
+  const ref = doc(requireDb(), 'audiologists', id)
   await deleteDoc(ref)
+}
+
+/**
+ * LEGACY helpers: used only for migration.
+ * When you log in with the old account once, we can copy its audiologists into the shared collection.
+ */
+export async function listAudiologistsLegacy(uid: string): Promise<AudiologistProfile[]> {
+  const col = legacyAudiologistsCol(uid)
+  const q = query(col, orderBy('name', 'asc'))
+  const res = await getDocs(q)
+  return res.docs.map((d) => {
+    const data = d.data() as any
+    return {
+      id: d.id,
+      name: data?.name ?? '',
+      rciNumber: data?.rciNumber ?? '',
+      signatureDataUrl: data?.signatureDataUrl ?? null,
+    }
+  })
+}
+
+export async function upsertAudiologistSharedWithId(
+  id: string,
+  input: Omit<AudiologistProfile, 'id'> & { migratedFromUid?: string },
+): Promise<void> {
+  const ref = doc(requireDb(), 'audiologists', id)
+  await setDoc(
+    ref,
+    {
+      ...input,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  )
 }
 
 

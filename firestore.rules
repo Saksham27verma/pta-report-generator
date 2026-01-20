@@ -23,6 +23,11 @@ service cloud.firestore {
         allow read, write: if request.auth != null && request.auth.uid == uid;
       }
     }
+
+    // Shared clinic audiologists list (used for signing / templates across logins)
+    match /audiologists/{docId} {
+      allow read, write: if request.auth != null;
+    }
   }
 }
 

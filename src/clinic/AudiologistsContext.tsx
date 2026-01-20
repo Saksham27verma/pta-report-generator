@@ -2,10 +2,12 @@ import React, { createContext, useContext, useEffect, useMemo, useState } from '
 import { useAuth } from '../auth/AuthContext'
 import type { AudiologistProfile } from '../types'
 import {
-  createAudiologist,
-  deleteAudiologist,
-  listAudiologists,
-  updateAudiologist,
+  createAudiologistShared,
+  deleteAudiologistShared,
+  listAudiologistsLegacy,
+  listAudiologistsShared,
+  updateAudiologistShared,
+  upsertAudiologistSharedWithId,
 } from '../services/audiologists'
 
 type AudiologistsContextValue = {
@@ -36,8 +38,31 @@ export function AudiologistsProvider({ children }: { children: React.ReactNode }
     setLoading(true)
     setError(null)
     try {
-      const res = await listAudiologists(user.uid)
-      setItems(res)
+      const shared = await listAudiologistsShared()
+
+      // Auto-migrate: if shared list is empty, and this user has legacy audiologists,
+      // copy them into the shared collection. (Run this once by logging in with the old account.)
+      if (shared.length === 0) {
+        const legacy = await listAudiologistsLegacy(user.uid)
+        if (legacy.length) {
+          await Promise.all(
+            legacy.map((a) =>
+              upsertAudiologistSharedWithId(a.id, {
+                name: a.name,
+                rciNumber: a.rciNumber,
+                signatureDataUrl: a.signatureDataUrl,
+                migratedFromUid: user.uid,
+              }),
+            ),
+          )
+          const sharedAfter = await listAudiologistsShared()
+          setItems(sharedAfter)
+        } else {
+          setItems(shared)
+        }
+      } else {
+        setItems(shared)
+      }
     } catch (e: any) {
       setError({ message: e?.message ?? 'Failed to load audiologists', code: e?.code })
       setItems([])
@@ -59,17 +84,17 @@ export function AudiologistsProvider({ children }: { children: React.ReactNode }
       refresh,
       create: async (input) => {
         if (!user) throw new Error('Not authenticated')
-        await createAudiologist(user.uid, input)
+        await createAudiologistShared(input)
         await refresh()
       },
       update: async (id, input) => {
         if (!user) throw new Error('Not authenticated')
-        await updateAudiologist(user.uid, id, input)
+        await updateAudiologistShared(id, input)
         await refresh()
       },
       remove: async (id) => {
         if (!user) throw new Error('Not authenticated')
-        await deleteAudiologist(user.uid, id)
+        await deleteAudiologistShared(id)
         await refresh()
       },
     }),
