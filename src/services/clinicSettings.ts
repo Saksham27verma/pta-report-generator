@@ -9,16 +9,17 @@ function requireDb() {
 }
 
 const COLLECTION = 'clinicSettings'
+const SHARED_DOC_ID = 'shared'
 
-export async function getClinicSettings(uid: string): Promise<ClinicSettings> {
-  const ref = doc(requireDb(), COLLECTION, uid)
+export async function getClinicSettingsShared(): Promise<ClinicSettings> {
+  const ref = doc(requireDb(), COLLECTION, SHARED_DOC_ID)
   const snap = await getDoc(ref)
   if (!snap.exists()) return defaultClinicSettings()
   return { ...defaultClinicSettings(), ...(snap.data() as any) } as ClinicSettings
 }
 
-export async function saveClinicSettings(uid: string, settings: ClinicSettings): Promise<void> {
-  const ref = doc(requireDb(), COLLECTION, uid)
+export async function saveClinicSettingsShared(settings: ClinicSettings): Promise<void> {
+  const ref = doc(requireDb(), COLLECTION, SHARED_DOC_ID)
   await setDoc(
     ref,
     {
@@ -27,6 +28,14 @@ export async function saveClinicSettings(uid: string, settings: ClinicSettings):
     },
     { merge: true },
   )
+}
+
+// Legacy per-user settings (old behavior); used only for one-time migration.
+export async function getClinicSettingsLegacy(uid: string): Promise<ClinicSettings | null> {
+  const ref = doc(requireDb(), COLLECTION, uid)
+  const snap = await getDoc(ref)
+  if (!snap.exists()) return null
+  return { ...defaultClinicSettings(), ...(snap.data() as any) } as ClinicSettings
 }
 
 

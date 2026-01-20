@@ -1,7 +1,11 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import type { ClinicSettings } from '../types'
 import { defaultClinicSettings } from '../utils/clinicSettingsDefaults'
-import { getClinicSettings, saveClinicSettings } from '../services/clinicSettings'
+import {
+  getClinicSettingsLegacy,
+  getClinicSettingsShared,
+  saveClinicSettingsShared,
+} from '../services/clinicSettings'
 import { useAuth } from '../auth/AuthContext'
 
 type ClinicSettingsContextValue = {
@@ -30,8 +34,25 @@ export function ClinicSettingsProvider({ children }: { children: React.ReactNode
     setLoading(true)
     setError(null)
     try {
-      const s = await getClinicSettings(user.uid)
-      setSettings(s)
+      const shared = await getClinicSettingsShared()
+
+      // One-time migration: if shared doc doesn't exist yet (i.e. we got defaults),
+      // copy the current user's legacy settings into shared.
+      const isDefaultShared =
+        JSON.stringify(shared) === JSON.stringify(defaultClinicSettings())
+
+      if (isDefaultShared) {
+        const legacy = await getClinicSettingsLegacy(user.uid)
+        if (legacy) {
+          await saveClinicSettingsShared(legacy)
+          const sharedAfter = await getClinicSettingsShared()
+          setSettings(sharedAfter)
+        } else {
+          setSettings(shared)
+        }
+      } else {
+        setSettings(shared)
+      }
     } catch (e: any) {
       // Common: permission-denied if firestore.rules not updated/published
       setError({ message: e?.message ?? 'Failed to load clinic settings', code: e?.code })
@@ -53,7 +74,7 @@ export function ClinicSettingsProvider({ children }: { children: React.ReactNode
       error,
       save: async (next) => {
         if (!user) throw new Error('Not authenticated')
-        await saveClinicSettings(user.uid, next)
+        await saveClinicSettingsShared(next)
         setSettings(next)
       },
       refresh,
