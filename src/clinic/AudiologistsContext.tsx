@@ -5,6 +5,7 @@ import {
   createAudiologistShared,
   deleteAudiologistShared,
   listAudiologistsLegacy,
+  listAudiologistsLegacyGroup,
   listAudiologistsShared,
   updateAudiologistShared,
   upsertAudiologistSharedWithId,
@@ -40,12 +41,15 @@ export function AudiologistsProvider({ children }: { children: React.ReactNode }
     try {
       const shared = await listAudiologistsShared()
 
-      // Auto-migrate (safe): if this user has legacy audiologists, upsert any that are missing in shared.
-      // (Log in once with the old account to copy its saved audiologists.)
+      // Auto-migrate (safe):
+      // 1) Try current user's legacy audiologists
+      // 2) If none (e.g. old user disabled), fall back to collectionGroup across all legacy audiologists
       const legacy = await listAudiologistsLegacy(user.uid)
-      if (legacy.length) {
+      const legacyAny = legacy.length ? legacy : await listAudiologistsLegacyGroup()
+
+      if (legacyAny.length) {
         const sharedIds = new Set(shared.map((a) => a.id))
-        const toUpsert = legacy.filter((a) => !sharedIds.has(a.id))
+        const toUpsert = legacyAny.filter((a) => !sharedIds.has(a.id))
         if (toUpsert.length) {
           await Promise.all(
             toUpsert.map((a) =>
@@ -59,9 +63,7 @@ export function AudiologistsProvider({ children }: { children: React.ReactNode }
           )
           const sharedAfter = await listAudiologistsShared()
           setItems(sharedAfter)
-        } else {
-          setItems(shared)
-        }
+        } else setItems(shared)
       } else setItems(shared)
     } catch (e: any) {
       setError({ message: e?.message ?? 'Failed to load audiologists', code: e?.code })

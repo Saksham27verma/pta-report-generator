@@ -1,6 +1,7 @@
 import {
   addDoc,
   collection,
+  collectionGroup,
   deleteDoc,
   doc,
   getDocs,
@@ -102,6 +103,22 @@ export async function upsertAudiologistSharedWithId(
     },
     { merge: true },
   )
+}
+
+export async function listAudiologistsLegacyGroup(): Promise<AudiologistProfile[]> {
+  // Reads ALL legacy audiologists across all clinicSettings/<uid>/audiologists/*
+  // (works even if the old user is disabled, as long as the docs still exist).
+  const q = query(collectionGroup(requireDb(), 'audiologists'), orderBy('name', 'asc'))
+  const res = await getDocs(q)
+  return res.docs.map((d) => {
+    const data = d.data() as any
+    return {
+      id: d.id,
+      name: data?.name ?? '',
+      rciNumber: data?.rciNumber ?? '',
+      signatureDataUrl: data?.signatureDataUrl ?? null,
+    }
+  })
 }
 
 

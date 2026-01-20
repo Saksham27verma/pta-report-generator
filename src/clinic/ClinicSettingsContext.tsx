@@ -4,6 +4,7 @@ import { defaultClinicSettings } from '../utils/clinicSettingsDefaults'
 import {
   getClinicSettingsLegacy,
   getClinicSettingsShared,
+  findBestLegacyClinicSettings,
   saveClinicSettingsShared,
 } from '../services/clinicSettings'
 import { useAuth } from '../auth/AuthContext'
@@ -75,7 +76,18 @@ export function ClinicSettingsProvider({ children }: { children: React.ReactNode
         } else {
           setSettings(shared)
         }
-      } else setSettings(shared)
+      } else {
+        // If the new user has no legacy settings, attempt to find *any* legacy clinicSettings/<uid>
+        // and promote it into shared (so disabled/old accounts still work).
+        const candidate = await findBestLegacyClinicSettings()
+        if (candidate) {
+          const merged = mergeLegacyIntoShared(shared, candidate.settings)
+          if (JSON.stringify(merged) !== JSON.stringify(shared)) {
+            await saveClinicSettingsShared(merged)
+            setSettings(merged)
+          } else setSettings(shared)
+        } else setSettings(shared)
+      }
     } catch (e: any) {
       // Common: permission-denied if firestore.rules not updated/published
       setError({ message: e?.message ?? 'Failed to load clinic settings', code: e?.code })
