@@ -41,30 +41,38 @@ export function AudiologistsProvider({ children }: { children: React.ReactNode }
     try {
       const shared = await listAudiologistsShared()
 
-      // Auto-migrate (safe):
-      // 1) Try current user's legacy audiologists
-      // 2) If none (e.g. old user disabled), fall back to collectionGroup across all legacy audiologists
-      const legacy = await listAudiologistsLegacy(user.uid)
-      const legacyAny = legacy.length ? legacy : await listAudiologistsLegacyGroup()
+      // If shared already has items, use it (this is the new source of truth).
+      if (shared.length) {
+        setItems(shared)
+        return
+      }
+
+      // If shared is empty, show legacy audiologists immediately (so UI works even if migration can't run).
+      let legacyAny: AudiologistProfile[] = []
+      try {
+        const legacy = await listAudiologistsLegacy(user.uid)
+        legacyAny = legacy.length ? legacy : await listAudiologistsLegacyGroup()
+      } catch {
+        legacyAny = []
+      }
 
       if (legacyAny.length) {
-        const sharedIds = new Set(shared.map((a) => a.id))
-        const toUpsert = legacyAny.filter((a) => !sharedIds.has(a.id))
-        if (toUpsert.length) {
-          await Promise.all(
-            toUpsert.map((a) =>
-              upsertAudiologistSharedWithId(a.id, {
-                name: a.name,
-                rciNumber: a.rciNumber,
-                signatureDataUrl: a.signatureDataUrl,
-                migratedFromUid: user.uid,
-              }),
-            ),
-          )
-          const sharedAfter = await listAudiologistsShared()
-          setItems(sharedAfter)
-        } else setItems(shared)
-      } else setItems(shared)
+        setItems(legacyAny)
+        // Best-effort background migration to shared (don't block UI).
+        void Promise.all(
+          legacyAny.map((a) =>
+            upsertAudiologistSharedWithId(a.id, {
+              name: a.name,
+              rciNumber: a.rciNumber,
+              signatureDataUrl: a.signatureDataUrl,
+              migratedFromUid: user.uid,
+            }),
+          ),
+        ).catch(() => {})
+        return
+      }
+
+      setItems([])
     } catch (e: any) {
       setError({ message: e?.message ?? 'Failed to load audiologists', code: e?.code })
       setItems([])

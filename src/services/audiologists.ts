@@ -108,9 +108,9 @@ export async function upsertAudiologistSharedWithId(
 export async function listAudiologistsLegacyGroup(): Promise<AudiologistProfile[]> {
   // Reads ALL legacy audiologists across all clinicSettings/<uid>/audiologists/*
   // (works even if the old user is disabled, as long as the docs still exist).
-  const q = query(collectionGroup(requireDb(), 'audiologists'), orderBy('name', 'asc'))
-  const res = await getDocs(q)
-  return res.docs.map((d) => {
+  // Avoid orderBy here: collectionGroup orderBy can require an index in some projects.
+  const res = await getDocs(collectionGroup(requireDb(), 'audiologists'))
+  const items = res.docs.map((d) => {
     const data = d.data() as any
     return {
       id: d.id,
@@ -119,6 +119,8 @@ export async function listAudiologistsLegacyGroup(): Promise<AudiologistProfile[
       signatureDataUrl: data?.signatureDataUrl ?? null,
     }
   })
+  items.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+  return items
 }
 
 
