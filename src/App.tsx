@@ -29,67 +29,77 @@ import { LoginPage } from './pages/LoginPage'
 import { ReportEditorPage } from './pages/ReportEditorPage'
 import { ReportPreviewPage } from './pages/ReportPreviewPage'
 import { ClinicSettingsPage } from './pages/ClinicSettingsPage'
+import { EmbedReportPage } from './pages/EmbedReportPage'
 import { isFirebaseConfigured } from './firebase'
 
 function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <ClinicSettingsProvider>
-          <AudiologistsProvider>
-            <Shell>
-              <Routes>
-                {!isFirebaseConfigured ? (
-                  <Route path="*" element={<FirebaseSetupPage />} />
-                ) : (
-                  <>
-                    <Route path="/login" element={<LoginPage />} />
-                    <Route
-                      path="/"
-                      element={
-                        <RequireAuth>
-                          <DashboardPage />
-                        </RequireAuth>
-                      }
-                    />
-                    <Route
-                      path="/settings"
-                      element={
-                        <RequireAuth>
-                          <ClinicSettingsPage />
-                        </RequireAuth>
-                      }
-                    />
-                    <Route
-                      path="/reports/new"
-                      element={
-                        <RequireAuth>
-                          <ReportEditorPage mode="new" />
-                        </RequireAuth>
-                      }
-                    />
-                    <Route
-                      path="/reports/:reportId"
-                      element={
-                        <RequireAuth>
-                          <ReportEditorPage mode="edit" />
-                        </RequireAuth>
-                      }
-                    />
-                    <Route
-                      path="/reports/:reportId/preview"
-                      element={
-                        <RequireAuth>
-                          <ReportPreviewPage />
-                        </RequireAuth>
-                      }
-                    />
-                  </>
-                )}
-              </Routes>
-            </Shell>
-          </AudiologistsProvider>
-        </ClinicSettingsProvider>
+        <Routes>
+          {!isFirebaseConfigured ? (
+            <Route path="*" element={<FirebaseSetupPage />} />
+          ) : (
+            <>
+              <Route path="/embed/reports/:reportId" element={<EmbedReportPage />} />
+              <Route path="/embed/:reportId" element={<EmbedReportPage />} />
+              <Route
+                path="*"
+                element={
+                  <ClinicSettingsProvider>
+                    <AudiologistsProvider>
+                      <Shell>
+                        <Routes>
+                          <Route path="/login" element={<LoginPage />} />
+                          <Route
+                            path="/"
+                            element={
+                              <RequireAuth>
+                                <DashboardPage />
+                              </RequireAuth>
+                            }
+                          />
+                          <Route
+                            path="/settings"
+                            element={
+                              <RequireAuth>
+                                <ClinicSettingsPage />
+                              </RequireAuth>
+                            }
+                          />
+                          <Route
+                            path="/reports/new"
+                            element={
+                              <RequireAuth>
+                                <ReportEditorPage mode="new" />
+                              </RequireAuth>
+                            }
+                          />
+                          <Route
+                            path="/reports/:reportId"
+                            element={
+                              <RequireAuth>
+                                <ReportEditorPage mode="edit" />
+                              </RequireAuth>
+                            }
+                          />
+                          <Route
+                            path="/reports/:reportId/preview"
+                            element={
+                              <RequireAuth>
+                                <ReportPreviewPage />
+                              </RequireAuth>
+                            }
+                          />
+                        </Routes>
+                      </Shell>
+                    </AudiologistsProvider>
+                  </ClinicSettingsProvider>
+                }
+              />
+            </>
+          )}
+        </Routes>
       </AuthProvider>
     </BrowserRouter>
   )

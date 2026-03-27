@@ -35,11 +35,98 @@ const REPORTS = 'reports'
 const RECENT_LIMIT = 100
 const FETCH_BUFFER = 150
 
+/** PTA stored frequencies; CRM list uses 125 Hz as extra leading slot (null). */
+const PTA_AUDIO_FREQS = [250, 500, 1000, 2000, 4000, 8000] as const
+const CRM_AUDIOGRAM_FREQS_HZ = [125, 250, 500, 1000, 2000, 4000, 8000] as const
+const PTA_FREQ_SET = new Set<number>([...PTA_AUDIO_FREQS])
+
+type CrmAudiogramData = {
+  rightAirConduction: (number | null)[]
+  leftAirConduction: (number | null)[]
+  rightBoneConduction: (number | null)[]
+  leftBoneConduction: (number | null)[]
+  rightMasking: boolean[]
+  leftMasking: boolean[]
+  notes?: string
+}
+
 type CrmReportRow = {
   id: string
   patientName: string
   viewUrl: string
+  embedUrl: string
+  audiogramData?: CrmAudiogramData
   createdAt?: string
+}
+
+function readAudPoint(
+  ear: unknown,
+  hz: number,
+  cond: 'air' | 'bone',
+): { db: number | null; nr: boolean; masked: boolean } | null {
+  if (!ear || typeof ear !== 'object') return null
+  const slot = (ear as Record<string, unknown>)[String(hz)]
+  if (!slot || typeof slot !== 'object') return null
+  const p = (slot as Record<string, unknown>)[cond]
+  if (!p || typeof p !== 'object') return null
+  const o = p as Record<string, unknown>
+  const db = typeof o.db === 'number' || o.db === null ? (o.db as number | null) : null
+  return { db, nr: Boolean(o.nr), masked: Boolean(o.masked) }
+}
+
+function mapEarToCrmAudiogram(ear: unknown) {
+  const air: (number | null)[] = []
+  const bone: (number | null)[] = []
+  const mask: boolean[] = []
+  for (const hz of CRM_AUDIOGRAM_FREQS_HZ) {
+    if (!PTA_FREQ_SET.has(hz)) {
+      air.push(null)
+      bone.push(null)
+      mask.push(false)
+      continue
+    }
+    const ap = readAudPoint(ear, hz, 'air')
+    const bp = readAudPoint(ear, hz, 'bone')
+    air.push(ap?.nr ? null : ap?.db ?? null)
+    bone.push(bp?.nr ? null : bp?.db ?? null)
+    mask.push(Boolean(ap?.masked))
+  }
+  return { air, bone, mask }
+}
+
+function audiogramDataFromFirestore(data: DocumentData | undefined): CrmAudiogramData | undefined {
+  const a = data?.audiometry
+  if (!a || typeof a !== 'object') return undefined
+  const right = (a as Record<string, unknown>).right
+  const left = (a as Record<string, unknown>).left
+  if (!right || !left) return undefined
+  try {
+    const r = mapEarToCrmAudiogram(right)
+    const l = mapEarToCrmAudiogram(left)
+    const diag = data?.diagnosis
+    let notes: string | undefined
+    if (diag && typeof diag === 'object') {
+      const d = diag as Record<string, unknown>
+      const parts: string[] = []
+      if (typeof d.provisionalDiagnosis === 'string' && d.provisionalDiagnosis.trim())
+        parts.push(d.provisionalDiagnosis.trim())
+      if (typeof d.recommendations === 'string' && d.recommendations.trim())
+        parts.push(d.recommendations.trim())
+      if (parts.length) notes = parts.join('\n\n')
+    }
+    const out: CrmAudiogramData = {
+      rightAirConduction: r.air,
+      leftAirConduction: l.air,
+      rightBoneConduction: r.bone,
+      leftBoneConduction: l.bone,
+      rightMasking: r.mask,
+      leftMasking: l.mask,
+    }
+    if (notes) out.notes = notes
+    return out
+  } catch {
+    return undefined
+  }
 }
 
 function allowHttpViewUrl(): boolean {
@@ -74,14 +161,20 @@ function createdAtIso(data: DocumentData | undefined): string | undefined {
 
 function docToRow(id: string, data: DocumentData | undefined, origin: string): CrmReportRow | null {
   if (!id) return null
-  const viewUrl = `${origin.replace(/\/$/, '')}/reports/${encodeURIComponent(id)}`
-  if (!isValidViewUrl(viewUrl)) return null
-  return {
+  const base = origin.replace(/\/$/, '')
+  const viewUrl = `${base}/reports/${encodeURIComponent(id)}`
+  const embedUrl = `${base}/embed/${encodeURIComponent(id)}`
+  if (!isValidViewUrl(viewUrl) || !isValidViewUrl(embedUrl)) return null
+  const audiogramData = audiogramDataFromFirestore(data)
+  const row: CrmReportRow = {
     id,
     patientName: patientNameFromData(data, id),
     viewUrl,
+    embedUrl,
     createdAt: createdAtIso(data),
   }
+  if (audiogramData) row.audiogramData = audiogramData
+  return row
 }
 
 function queryLooksLikeReportId(q: string): boolean {
@@ -225,13 +318,26 @@ function ensureHttpsViewBase(origin: string): string {
 function devMockReports(origin: string) {
   const base = origin.replace(/\/$/, '')
   const id = 'dev-mock-report'
-  const viewUrl = `${base}/reports/${id}`
+  const viewUrl = `${base}/reports/${encodeURIComponent(id)}`
+  const embedUrl = `${base}/embed/${encodeURIComponent(id)}`
+  const null7 = (): (number | null)[] => Array.from({ length: 7 }, () => null)
+  const false7 = (): boolean[] => Array.from({ length: 7 }, () => false)
   return {
     reports: [
       {
         id,
         patientName: 'Dev (mock) Patient',
         viewUrl,
+        embedUrl,
+        audiogramData: {
+          rightAirConduction: null7(),
+          leftAirConduction: null7(),
+          rightBoneConduction: null7(),
+          leftBoneConduction: null7(),
+          rightMasking: false7(),
+          leftMasking: false7(),
+          notes: 'Dev mock audiogram (empty thresholds)',
+        },
         createdAt: new Date().toISOString(),
       },
     ],
@@ -269,9 +375,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const db = getAdminFirestore()
     const reports = await listCrmReports(db, typeof q === 'string' ? q : undefined, origin)
     const valid = reports.filter((r) => {
-      if (!r.id || !r.viewUrl) return false
-      if (r.viewUrl.startsWith('https://')) return true
-      return process.env.NODE_ENV === 'development' && r.viewUrl.startsWith('http://')
+      if (!r.id || !r.viewUrl || !r.embedUrl) return false
+      if (r.viewUrl.startsWith('https://') && r.embedUrl.startsWith('https://')) return true
+      return (
+        process.env.NODE_ENV === 'development' &&
+        r.viewUrl.startsWith('http://') &&
+        r.embedUrl.startsWith('http://')
+      )
     })
     return res.status(200).json({ reports: valid })
   } catch (e: unknown) {
