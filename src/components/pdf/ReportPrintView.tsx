@@ -1,6 +1,7 @@
-import { Box, Divider, Paper, Typography } from '@mui/material'
+import { Box, Divider, Paper, Table, TableBody, TableCell, TableHead, TableRow, Typography } from '@mui/material'
 import { Email, Language, Phone } from '@mui/icons-material'
-import type { ReportDoc } from '../../types'
+import type { AudiometryPoint, ReportDoc } from '../../types'
+import { AUDIO_FREQS } from '../../types'
 import { AudiogramPair } from '../audiogram/AudiogramPair'
 import { useClinicSettings } from '../../clinic/ClinicSettingsContext'
 import { DEFAULT_ACCENT, DEFAULT_PRIMARY } from '../../utils/clinicSettingsDefaults'
@@ -38,6 +39,9 @@ export function ReportPrintView({ report }: { report: ReportDoc }) {
       <PatientBlock report={report} />
       <Box sx={{ my: 1.5 }}>
         <AudiogramPair data={report.audiometry} chartHeight={250} layout="fixed" />
+      </Box>
+      <Box sx={{ my: 1.5 }}>
+        <AudiometrySummaryTable report={report} />
       </Box>
       <Box sx={{ my: 1.5 }}>
         <TestsTable report={report} />
@@ -285,6 +289,66 @@ function InfoField({
         {String(value)}
       </Typography>
     </Box>
+  )
+}
+
+function formatAudiometryCell(p: AudiometryPoint): { text: string; isNr: boolean } {
+  if (p.nr) return { text: 'NR', isNr: true }
+  if (p.db != null) return { text: String(p.db), isNr: false }
+  return { text: '—', isNr: false }
+}
+
+function AudiometrySummaryTable({ report }: { report: ReportDoc }) {
+  const { audiometry } = report
+  return (
+    <Paper sx={{ p: 1.5 }} variant="outlined">
+      <Typography sx={{ fontWeight: 900, mb: 0.75, fontSize: 13 }}>Audiometry Results</Typography>
+      <Table size="small" sx={{ '& td, & th': { py: 0.4, px: 1, fontSize: 11 } }}>
+        <TableHead>
+          <TableRow>
+            <TableCell sx={{ fontWeight: 800 }}>Hz</TableCell>
+            <TableCell sx={{ fontWeight: 800 }} align="center">
+              R AC
+            </TableCell>
+            <TableCell sx={{ fontWeight: 800 }} align="center">
+              R BC
+            </TableCell>
+            <TableCell sx={{ fontWeight: 800 }} align="center">
+              L AC
+            </TableCell>
+            <TableCell sx={{ fontWeight: 800 }} align="center">
+              L BC
+            </TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {AUDIO_FREQS.map((freq) => {
+            const r = audiometry.right[freq]
+            const l = audiometry.left[freq]
+            const cells = [
+              formatAudiometryCell(r.air),
+              formatAudiometryCell(r.bone),
+              formatAudiometryCell(l.air),
+              formatAudiometryCell(l.bone),
+            ]
+            return (
+              <TableRow key={freq}>
+                <TableCell sx={{ fontWeight: 800 }}>{freq}</TableCell>
+                {cells.map((cell, i) => (
+                  <TableCell
+                    key={i}
+                    align="center"
+                    sx={{ fontWeight: cell.isNr ? 900 : 700, color: cell.isNr ? '#000' : 'inherit' }}
+                  >
+                    {cell.text}
+                  </TableCell>
+                ))}
+              </TableRow>
+            )
+          })}
+        </TableBody>
+      </Table>
+    </Paper>
   )
 }
 

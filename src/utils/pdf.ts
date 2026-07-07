@@ -2,6 +2,9 @@ import html2canvas from 'html2canvas'
 import jsPDF from 'jspdf'
 
 export async function createPdfBlobFromElement(el: HTMLElement): Promise<Blob> {
+  // Allow Chart.js (including custom NR plugins) to finish painting before capture.
+  await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+
   const canvas = await html2canvas(el, {
     scale: 2,
     useCORS: true,

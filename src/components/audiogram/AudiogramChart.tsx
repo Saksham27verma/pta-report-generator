@@ -106,6 +106,9 @@ export function AudiogramChart({ ear, data, title, height = 320 }: Props) {
     animation: false,
     // Keep chart rendering consistent across devices (mobile DPR vs desktop DPR).
     devicePixelRatio: 2,
+    layout: {
+      padding: { top: 12, bottom: 12 },
+    },
     plugins: {
       legend: { display: false },
       tooltip: {
@@ -129,7 +132,12 @@ export function AudiogramChart({ ear, data, title, height = 320 }: Props) {
         reverse: true, // inverted scale: -10 at top to 120 at bottom
         min: -10,
         max: 120,
-        ticks: { stepSize: 10 },
+        ticks: {
+          stepSize: 10,
+          autoSkip: false,
+          maxTicksLimit: 15,
+          font: { size: 10 },
+        },
         grid: { color: 'rgba(0,0,0,0.10)' },
       },
     },
@@ -151,62 +159,63 @@ export function AudiogramChart({ ear, data, title, height = 320 }: Props) {
         return
       }
 
-      // NR should be shown at max output markers, without plotting a definitive threshold:
-      // - AC NR at 120 dB
-      // - BC NR at 75 dB (typical max BC output)
-      const drawTag = (x: number, y: number, label: string) => {
-        const padX = 6
-        const textW = ctx.measureText(label).width
-        const w = Math.ceil(textW + padX * 2)
-        const h = 18
-        const r = 6
-
-        const left = x - w / 2
-        const top = y - h - 8
-
-        // Tag background
-        ctx.fillStyle = 'rgba(255,255,255,0.95)'
-        ctx.strokeStyle = c
-        ctx.lineWidth = 1.5
-
-        ctx.beginPath()
-        ctx.moveTo(left + r, top)
-        ctx.arcTo(left + w, top, left + w, top + h, r)
-        ctx.arcTo(left + w, top + h, left, top + h, r)
-        ctx.arcTo(left, top + h, left, top, r)
-        ctx.arcTo(left, top, left + w, top, r)
-        ctx.closePath()
-        ctx.fill()
-        ctx.stroke()
-
-        // Arrow from tag to point
-        ctx.beginPath()
-        ctx.moveTo(x, top + h)
-        ctx.lineTo(x, y - 2)
-        ctx.stroke()
-
-        // Small marker at y
-        ctx.fillStyle = c
-        ctx.beginPath()
-        ctx.arc(x, y, 3, 0, Math.PI * 2)
-        ctx.fill()
-
-        // Label text
-        ctx.fillStyle = c
-        ctx.fillText(label, x, top + h / 2 + 0.5)
+      const chartArea = chart.chartArea
+      if (!chartArea) {
+        ctx.restore()
+        return
       }
 
-      const drawNrAt = (idx: number, yValue: number) => {
-        const x = xScale.getPixelForTick(idx)
+      // NR at max output markers without plotting a definitive threshold:
+      // - AC NR at 120 dB
+      // - BC NR at 75 dB (typical max BC output)
+      const drawNrArrow = (x: number, yValue: number, xOffset: number) => {
+        const xPos = x + xOffset
         const y = yScale.getPixelForValue(yValue)
-        drawTag(x, y, 'NR')
+
+        ctx.strokeStyle = c
+        ctx.fillStyle = c
+        ctx.lineWidth = 2
+
+        // Horizontal marker at max presentation level
+        ctx.beginPath()
+        ctx.moveTo(xPos - 5, y)
+        ctx.lineTo(xPos + 5, y)
+        ctx.stroke()
+
+        // Downward arrow (standard audiogram NR convention)
+        const arrowEnd = Math.min(y + 22, chartArea.bottom - 2)
+        if (arrowEnd > y + 4) {
+          ctx.beginPath()
+          ctx.moveTo(xPos, y + 2)
+          ctx.lineTo(xPos, arrowEnd)
+          ctx.stroke()
+
+          ctx.beginPath()
+          ctx.moveTo(xPos - 4, arrowEnd - 5)
+          ctx.lineTo(xPos, arrowEnd)
+          ctx.lineTo(xPos + 4, arrowEnd - 5)
+          ctx.closePath()
+          ctx.fill()
+        }
+
+        // NR label above the marker
+        ctx.font = '800 10px Roboto, Arial, sans-serif'
+        ctx.textAlign = 'center'
+        ctx.textBaseline = 'bottom'
+        ctx.fillText('NR', xPos, y - 6)
       }
 
       airNr.forEach((flag, idx) => {
-        if (flag) drawNrAt(idx, 120)
+        if (!flag) return
+        const bothNr = boneNr[idx]
+        const xOffset = bothNr ? -6 : 0
+        drawNrArrow(xScale.getPixelForTick(idx), 120, xOffset)
       })
       boneNr.forEach((flag, idx) => {
-        if (flag) drawNrAt(idx, 75)
+        if (!flag) return
+        const bothNr = airNr[idx]
+        const xOffset = bothNr ? 6 : 0
+        drawNrArrow(xScale.getPixelForTick(idx), 75, xOffset)
       })
 
       ctx.restore()
